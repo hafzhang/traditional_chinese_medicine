@@ -1,0 +1,21 @@
+# Crontab 配置 - Claude Code 无人值守定时任务
+# 添加方法: crontab -e
+# 或使用: sudo crontab -u your_username -e
+
+# 每6小时运行一次token监控检查
+0 */6 * * * bash /path/to/traditional_chinese_medicine/scripts/hooks/token_guard.sh >> .claude/hooks/cron_token.log 2>&1
+
+# 每天凌晨0点执行日志清理
+0 0 * * * bash /path/to/traditional_chinese_medicine/scripts/hooks/house_keeping.sh >> .claude/hooks/cron_housekeeping.log 2>&1
+
+# 每天早上8点检查进度并发送日报
+0 8 * * * bash -c 'cd /path/to/traditional_chinese_medicine && bash scripts/hooks/auto_plan_next.sh' | mail -s "Claude 每日进度" your@email.com
+
+# 每30分钟检查进程状态，确保没有僵死
+*/30 * * * * pgrep -f "claude" || echo "Claude 进程异常退出" | mail -s "Claude 进程告警" your@email.com
+
+# 每小时检查磁盘空间
+0 * * * * df -h /path/to/traditional_chinese_medicine | awk 'NR==2 {if ($5+0 > 90) print "磁盘警告: " $5}' | mail -s "磁盘空间告警" your@email.com
+
+# 每天晚上10点生成当日工作报告
+22 0 * * * bash /path/to/traditional_chinese_medicine/scripts/generate_daily_report.sh 2>/dev/null || true

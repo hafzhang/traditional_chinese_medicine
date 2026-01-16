@@ -1,0 +1,70 @@
+# Priority Rules for MVP Development
+# 优先级规则配置
+
+# 优先级定义
+# 1 = 最高优先级（阻塞问题、核心 bug）
+# 2-3 = 高优先级（核心功能）
+# 4-5 = 中等优先级（正常任务）
+# 6-7 = 低优先级（优化、改进）
+# 8-9 = 最低优先级（美化、文档）
+
+# 强制拦截规则
+BLOCKING_PATTERNS=(
+    "社交.*功能|积分.*商城|AI.*舌诊|企业.*服务"
+)
+
+# 高优先级模式
+HIGH_PRIORITY_PATTERNS=(
+    "修复.*bug|解决.*错误|核心.*功能"
+    "阻塞.*问题|无法.*继续|紧急.*修复"
+)
+
+# 低优先级模式
+LOW_PRIORITY_PATTERNS=(
+    "优化.*性能|重构.*代码|改进.*体验"
+    "美化.*界面|添加.*注释|优化.*样式"
+)
+
+# MVP 核心功能（必须完成）
+MVP_CORE_FEATURES=(
+    "constitution_test_questionnaire"
+    "judgment_service"
+    "basic_report_generation"
+    "diet_recommendation"
+    "result_visualization"
+    "share_card"
+)
+
+# MVP 非核心功能（可延后）
+MVP_NICE_TO_HAVE=(
+    "social_features"
+    "points_mall"
+    "ai_tongue_diagnosis"
+    "enterprise_service"
+    "seasonal_health"
+    "exercise_recommendation"
+    "health_tracking"
+    "complex_recommendation_engine"
+)
+
+# 死循环检测
+MAX_RETRY_COUNT=3
+SAME_TASK_THRESHOLD=3
+
+# 任务大小限制
+MAX_LINES_PER_CHANGE=100
+MAX_FILES_PER_CHANGE=3
+MAX_FUNCTIONS_PER_CHANGE=5
+
+# 强制停机条件
+STOP_CONDITIONS=(
+    "retry_count>$MAX_RETRY_COUNT"
+    "syntax_error_count>5"
+    "same_file_changed>$SAME_TASK_THRESHOLD"
+    "consecutive_failures>3"
+)
+
+# 时间限制
+WORK_HOURS_START=9
+WORK_HOURS_END=18
+MAX_CONTINUOUS_WORK_MINUTES=120

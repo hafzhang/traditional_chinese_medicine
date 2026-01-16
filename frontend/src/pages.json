@@ -1,0 +1,72 @@
+{
+  "pages": [
+    {
+      "path": "pages/index/index",
+      "style": {
+        "navigationBarTitleText": "体质识别"
+      }
+    },
+    {
+      "path": "pages/test/test",
+      "style": {
+        "navigationBarTitleText": "体质测试"
+      }
+    },
+    {
+      "path": "pages/result/result",
+      "style": {
+        "navigationBarTitleText": "测试结果"
+      }
+    },
+    {
+      "path": "pages/detail/detail",
+      "style": {
+        "navigationBarTitleText": "体质详情"
+      }
+    },
+    {
+      "path": "pages/food/list",
+      "style": {
+        "navigationBarTitleText": "饮食推荐"
+      }
+    },
+    {
+      "path": "pages/food/food",
+      "style": {
+        "navigationBarTitleText": "体质饮食推荐"
+      }
+    }
+  ],
+  "globalStyle": {
+    "navigationBarTextStyle": "black",
+    "navigationBarTitleText": "体质识别",
+    "navigationBarBackgroundColor": "#F8F8F8",
+    "backgroundColor": "#F8F8F8"
+  },
+  "tabBar": {
+    "color": "#7A7E83",
+    "selectedColor": "#3cc51f",
+    "borderStyle": "black",
+    "backgroundColor": "#ffffff",
+    "list": [
+      {
+        "pagePath": "pages/index/index",
+        "iconPath": "static/tab-home.png",
+        "selectedIconPath": "static/tab-home-active.png",
+        "text": "首页"
+      },
+      {
+        "pagePath": "pages/test/test",
+        "iconPath": "static/tab-test.png",
+        "selectedIconPath": "static/tab-test-active.png",
+        "text": "测试"
+      },
+      {
+        "pagePath": "pages/food/list",
+        "iconPath": "static/tab-food.png",
+        "selectedIconPath": "static/tab-food-active.png",
+        "text": "饮食"
+      }
+    ]
+  }
+}

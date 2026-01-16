@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
+    <title>中医体质识别</title>
+    <style>
+        /* 调试链接样式 */
+        .debug-links {
+            position: fixed;
+            bottom: 10px;
+            right: 10px;
+            background: #fff;
+            padding: 10px;
+            border: 1px solid #ccc;
+            z-index: 9999;
+            font-size: 12px;
+        }
+        .debug-links a {
+            display: block;
+            margin: 5px 0;
+            color: #667eea;
+        }
+    </style>
+    <script>
+        // Hash 模式下，重定向根路径到首页
+        if (location.pathname === '/' && location.hash === '') {
+            location.hash = '/pages/index/index';
+        }
+    </script>
+</head>
+<body>
+    <div id="app"></div>
+    <!-- 调试链接 -->
+    <div class="debug-links">
+        <strong>调试链接:</strong>
+        <a href="#/pages/index/index">首页</a>
+        <a href="#/pages/test/test">测试页</a>
+        <a href="javascript:console.log('Debug: uni =', typeof uni); console.log('Debug: window.uni =', typeof window.uni)">检查uni对象</a>
+    </div>
+    <script type="module" src="/src/main.js"></script>
+</body>
+</html>
