@@ -1,0 +1,27 @@
+FROM node:18-alpine AS builder
+
+WORKDIR /app
+
+# 复制 package 文件
+COPY package*.json ./
+
+# 安装依赖
+RUN npm install
+
+# 复制源代码
+COPY . .
+
+# 构建 H5 版本
+RUN npm run build:h5
+
+# 生产环境使用 Caddy 提供 H5 静态文件
+FROM caddy:alpine
+
+WORKDIR /usr/share/caddy
+
+# 从构建阶段复制构建产物
+COPY --from=builder /app/dist/build/h5 ./html
+
+EXPOSE 80
+
+CMD ["caddy", "file-server", "--root", "/usr/share/caddy/html", "--listen", ":80"]
