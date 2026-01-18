@@ -5,7 +5,7 @@
 
 import { describe, it, expect, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
-import RecipesList from '@/pages/recipes/recipes.vue'
+import RecipesList from '@/pages/recipes/list.vue'
 
 describe('RecipesList', () => {
   it('组件应该正确渲染', () => {

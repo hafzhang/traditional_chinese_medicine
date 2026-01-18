@@ -78,46 +78,39 @@ async def get_acupoints(
     }
 
 
-@router.get("/{acupoint_id}", response_model=AcupointDetailResponse)
-async def get_acupoint_detail(
-    acupoint_id: str,
-    db: Session = Depends(get_db_optional)
-) -> Dict[str, Any]:
+# 静态列表路由必须放在动态路由之前
+@router.get("/body-parts/list")
+async def get_body_parts() -> Dict[str, Any]:
     """
-    获取穴位详情
+    获取部位列表
     """
-    if db is None:
-        raise HTTPException(status_code=503, detail="Database unavailable")
-
-    acupoint = acupoint_service.get_acupoint_by_id(acupoint_id, db)
-
-    if not acupoint:
-        raise HTTPException(status_code=404, detail="Acupoint not found")
+    body_parts = acupoint_service.get_body_parts()
 
     return {
         "code": 0,
         "message": "success",
-        "data": {
-            "id": acupoint.id,
-            "name": acupoint.name,
-            "code": acupoint.code,
-            "meridian": acupoint.meridian,
-            "body_part": acupoint.body_part,
-            "location": acupoint.location,
-            "simple_location": acupoint.simple_location,
-            "efficacy": acupoint.efficacy,
-            "indications": acupoint.indications,
-            "massage_method": acupoint.massage_method,
-            "massage_duration": acupoint.massage_duration,
-            "massage_frequency": acupoint.massage_frequency,
-            "precautions": acupoint.precautions,
-            "suitable_constitutions": acupoint.suitable_constitutions,
-            "constitution_benefit": acupoint.constitution_benefit,
-            "image_url": acupoint.image_url
-        }
+        "data": body_parts
     }
 
 
+@router.get("/meridians/list")
+async def get_meridians(db: Session = Depends(get_db_optional)) -> Dict[str, Any]:
+    """
+    获取经络列表
+    """
+    if db is None:
+        raise HTTPException(status_code=503, detail="Database unavailable")
+
+    meridians = acupoint_service.get_meridians(db)
+
+    return {
+        "code": 0,
+        "message": "success",
+        "data": [{"value": m, "label": m} for m in meridians]
+    }
+
+
+# 动态路由（更具体的路由在前）
 @router.get("/recommend/{constitution}", response_model=AcupointListResponse)
 async def get_acupoint_recommendation(
     constitution: str,
@@ -232,32 +225,42 @@ async def get_acupoints_by_meridian(
     }
 
 
-@router.get("/body-parts/list")
-async def get_body_parts() -> Dict[str, Any]:
+# 最通用的动态路由放在最后
+@router.get("/{acupoint_id}", response_model=AcupointDetailResponse)
+async def get_acupoint_detail(
+    acupoint_id: str,
+    db: Session = Depends(get_db_optional)
+) -> Dict[str, Any]:
     """
-    获取部位列表
-    """
-    body_parts = acupoint_service.get_body_parts()
-
-    return {
-        "code": 0,
-        "message": "success",
-        "data": body_parts
-    }
-
-
-@router.get("/meridians/list")
-async def get_meridians(db: Session = Depends(get_db_optional)) -> Dict[str, Any]:
-    """
-    获取经络列表
+    获取穴位详情
     """
     if db is None:
         raise HTTPException(status_code=503, detail="Database unavailable")
 
-    meridians = acupoint_service.get_meridians(db)
+    acupoint = acupoint_service.get_acupoint_by_id(acupoint_id, db)
+
+    if not acupoint:
+        raise HTTPException(status_code=404, detail="Acupoint not found")
 
     return {
         "code": 0,
         "message": "success",
-        "data": [{"value": m, "label": m} for m in meridians]
+        "data": {
+            "id": acupoint.id,
+            "name": acupoint.name,
+            "code": acupoint.code,
+            "meridian": acupoint.meridian,
+            "body_part": acupoint.body_part,
+            "location": acupoint.location,
+            "simple_location": acupoint.simple_location,
+            "efficacy": acupoint.efficacy,
+            "indications": acupoint.indications,
+            "massage_method": acupoint.massage_method,
+            "massage_duration": acupoint.massage_duration,
+            "massage_frequency": acupoint.massage_frequency,
+            "precautions": acupoint.precautions,
+            "suitable_constitutions": acupoint.suitable_constitutions,
+            "constitution_benefit": acupoint.constitution_benefit,
+            "image_url": acupoint.image_url
+        }
     }

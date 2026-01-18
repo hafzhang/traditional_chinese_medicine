@@ -85,6 +85,76 @@ async def get_ingredients(
     }
 
 
+# 静态列表路由必须放在动态路由之前
+@router.get("/categories/list")
+async def get_ingredient_categories() -> Dict[str, Any]:
+    """
+    获取食材类别列表
+    """
+    categories = [
+        {"value": "谷物", "label": "谷物"},
+        {"value": "蔬菜", "label": "蔬菜"},
+        {"value": "水果", "label": "水果"},
+        {"value": "肉类", "label": "肉类"},
+        {"value": "水产", "label": "水产"},
+        {"value": "药材", "label": "药材"},
+        {"value": "调味品", "label": "调味品"},
+        {"value": "其他", "label": "其他"}
+    ]
+
+    return {
+        "code": 0,
+        "message": "success",
+        "data": categories
+    }
+
+
+@router.get("/natures/list")
+async def get_ingredient_natures() -> Dict[str, Any]:
+    """
+    获取食材性味列表
+    """
+    natures = [
+        {"value": "寒", "label": "寒"},
+        {"value": "凉", "label": "凉"},
+        {"value": "平", "label": "平"},
+        {"value": "温", "label": "温"},
+        {"value": "热", "label": "热"}
+    ]
+
+    return {
+        "code": 0,
+        "message": "success",
+        "data": natures
+    }
+
+
+# 动态路由
+@router.get("/recommend/{constitution}", response_model=IngredientRecommendationResponse)
+async def get_ingredient_recommendation(
+    constitution: str,
+    db: Session = Depends(get_db_optional)
+) -> Dict[str, Any]:
+    """
+    根据体质获取推荐食材
+
+    返回适合该体质的食材和禁忌食材
+    """
+    if db is None:
+        raise HTTPException(status_code=503, detail="Database unavailable")
+
+    if not ingredient_service.is_valid_constitution_code(constitution):
+        raise HTTPException(status_code=400, detail=f"Invalid constitution code: {constitution}")
+
+    result = ingredient_service.get_recommendation_by_constitution(constitution, db)
+
+    return {
+        "code": 0,
+        "message": "success",
+        "data": result
+    }
+
+
 @router.get("/{ingredient_id}", response_model=IngredientDetailResponse)
 async def get_ingredient_detail(
     ingredient_id: str,
@@ -129,72 +199,4 @@ async def get_ingredient_detail(
             "description": ingredient.description,
             "view_count": ingredient.view_count
         }
-    }
-
-
-@router.get("/recommend/{constitution}", response_model=IngredientRecommendationResponse)
-async def get_ingredient_recommendation(
-    constitution: str,
-    db: Session = Depends(get_db_optional)
-) -> Dict[str, Any]:
-    """
-    根据体质获取推荐食材
-
-    返回适合该体质的食材和禁忌食材
-    """
-    if db is None:
-        raise HTTPException(status_code=503, detail="Database unavailable")
-
-    if not ingredient_service.is_valid_constitution_code(constitution):
-        raise HTTPException(status_code=400, detail=f"Invalid constitution code: {constitution}")
-
-    result = ingredient_service.get_recommendation_by_constitution(constitution, db)
-
-    return {
-        "code": 0,
-        "message": "success",
-        "data": result
-    }
-
-
-@router.get("/categories/list")
-async def get_ingredient_categories() -> Dict[str, Any]:
-    """
-    获取食材类别列表
-    """
-    categories = [
-        {"value": "谷物", "label": "谷物"},
-        {"value": "蔬菜", "label": "蔬菜"},
-        {"value": "水果", "label": "水果"},
-        {"value": "肉类", "label": "肉类"},
-        {"value": "水产", "label": "水产"},
-        {"value": "药材", "label": "药材"},
-        {"value": "调味品", "label": "调味品"},
-        {"value": "其他", "label": "其他"}
-    ]
-
-    return {
-        "code": 0,
-        "message": "success",
-        "data": categories
-    }
-
-
-@router.get("/natures/list")
-async def get_ingredient_natures() -> Dict[str, Any]:
-    """
-    获取食材性味列表
-    """
-    natures = [
-        {"value": "寒", "label": "寒"},
-        {"value": "凉", "label": "凉"},
-        {"value": "平", "label": "平"},
-        {"value": "温", "label": "温"},
-        {"value": "热", "label": "热"}
-    ]
-
-    return {
-        "code": 0,
-        "message": "success",
-        "data": natures
     }
