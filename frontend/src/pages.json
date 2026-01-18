@@ -35,6 +35,66 @@
       "style": {
         "navigationBarTitleText": "体质饮食推荐"
       }
+    },
+    {
+      "path": "pages/ingredients/list",
+      "style": {
+        "navigationBarTitleText": "食材库"
+      }
+    },
+    {
+      "path": "pages/ingredients/detail",
+      "style": {
+        "navigationBarTitleText": "食材详情"
+      }
+    },
+    {
+      "path": "pages/recipes/list",
+      "style": {
+        "navigationBarTitleText": "食谱库"
+      }
+    },
+    {
+      "path": "pages/recipes/detail",
+      "style": {
+        "navigationBarTitleText": "食谱详情"
+      }
+    },
+    {
+      "path": "pages/acupoints/list",
+      "style": {
+        "navigationBarTitleText": "穴位查找"
+      }
+    },
+    {
+      "path": "pages/acupoints/detail",
+      "style": {
+        "navigationBarTitleText": "穴位详情"
+      }
+    },
+    {
+      "path": "pages/tongue/index",
+      "style": {
+        "navigationBarTitleText": "AI舌诊"
+      }
+    },
+    {
+      "path": "pages/tongue/result",
+      "style": {
+        "navigationBarTitleText": "舌诊结果"
+      }
+    },
+    {
+      "path": "pages/courses/list",
+      "style": {
+        "navigationBarTitleText": "养生课程"
+      }
+    },
+    {
+      "path": "pages/courses/detail",
+      "style": {
+        "navigationBarTitleText": "课程详情"
+      }
     }
   ],
   "globalStyle": {

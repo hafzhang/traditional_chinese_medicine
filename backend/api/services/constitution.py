@@ -146,6 +146,14 @@ class ConstitutionScorer:
                     "secondary_constitutions": [],
                     "scores": scores
                 }
+            # 如果平和质达到60分但其他体质也有≥40分的，需要排除平和质
+            # 重新计算最高分，排除平和质
+            max_score = 0
+            primary_type = ""
+            for ctype, score in scores.items():
+                if ctype != "peace" and score > max_score:
+                    max_score = score
+                    primary_type = ctype
 
         # 偏颇体质判定
         if not result_types:

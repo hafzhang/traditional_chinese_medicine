@@ -111,6 +111,66 @@
         </view>
       </view>
 
+      <!-- Phase 1 新增：推荐内容区 -->
+      <view class="card">
+        <view class="card-title">
+          <text class="title-icon">✨</text>
+          为您推荐
+        </view>
+
+        <!-- 推荐食材 -->
+        <view class="recommend-card" @click="goToIngredients">
+          <view class="recommend-icon">🥗</view>
+          <view class="recommend-content">
+            <view class="recommend-title">适合您的食材</view>
+            <view class="recommend-desc">
+              {{ constitutionInfo?.regulation?.diet?.[0] || '根据您的体质推荐' }}
+            </view>
+          </view>
+          <view class="recommend-arrow">→</view>
+        </view>
+
+        <!-- 推荐食谱 -->
+        <view class="recommend-card" @click="goToRecipes">
+          <view class="recommend-icon">🍲</view>
+          <view class="recommend-content">
+            <view class="recommend-title">推荐食谱</view>
+            <view class="recommend-desc">根据您的体质定制三餐食谱</view>
+          </view>
+          <view class="recommend-arrow">→</view>
+        </view>
+
+        <!-- 推荐穴位 -->
+        <view class="recommend-card" @click="goToAcupoints">
+          <view class="recommend-icon">🙌</view>
+          <view class="recommend-content">
+            <view class="recommend-title">穴位按摩</view>
+            <view class="recommend-desc">调理体质的常用穴位</view>
+          </view>
+          <view class="recommend-arrow">→</view>
+        </view>
+
+        <!-- AI舌诊 -->
+        <view class="recommend-card" @click="goToTongue">
+          <view class="recommend-icon">👅</view>
+          <view class="recommend-content">
+            <view class="recommend-title">AI舌诊分析</view>
+            <view class="recommend-desc">拍摄舌象照片，分析体质倾向</view>
+          </view>
+          <view class="recommend-arrow">→</view>
+        </view>
+
+        <!-- 养生课程 -->
+        <view class="recommend-card" @click="goToCourses">
+          <view class="recommend-icon">📚</view>
+          <view class="recommend-content">
+            <view class="recommend-title">养生课程</view>
+            <view class="recommend-desc">免费健康知识视频和文章</view>
+          </view>
+          <view class="recommend-arrow">→</view>
+        </view>
+      </view>
+
       <!-- 操作按钮 -->
       <view class="action-buttons">
         <button class="btn btn-primary btn-large btn-block" @click="viewDetail">
@@ -225,6 +285,51 @@ function viewDetail() {
 function viewFood() {
   uni.navigateTo({
     url: `/pages/food/food?constitution=${result.value.primary_constitution}`
+  })
+}
+
+/**
+ * 跳转到推荐食材 - Phase 1 新增
+ */
+function goToIngredients() {
+  uni.navigateTo({
+    url: `/pages/ingredients/list?constitution=${result.value.primary_constitution}`
+  })
+}
+
+/**
+ * 跳转到推荐食谱 - Phase 1 新增
+ */
+function goToRecipes() {
+  uni.navigateTo({
+    url: `/pages/recipes/list?constitution=${result.value.primary_constitution}`
+  })
+}
+
+/**
+ * 跳转到穴位按摩 - Phase 1 新增
+ */
+function goToAcupoints() {
+  uni.navigateTo({
+    url: `/pages/acupoints/list?constitution=${result.value.primary_constitution}`
+  })
+}
+
+/**
+ * 跳转到AI舌诊 - Phase 1 新增
+ */
+function goToTongue() {
+  uni.navigateTo({
+    url: `/pages/tongue/index?resultId=${resultId.value}`
+  })
+}
+
+/**
+ * 跳转到养生课程 - Phase 1 新增
+ */
+function goToCourses() {
+  uni.navigateTo({
+    url: `/pages/courses/list?constitution=${result.value.primary_constitution}`
   })
 }
 
@@ -502,5 +607,56 @@ function retest() {
 
 .btn-text::after {
   border: none;
+}
+
+/* Phase 1 新增：推荐卡片样式 */
+.recommend-card {
+  display: flex;
+  align-items: center;
+  gap: 20rpx;
+  padding: 24rpx;
+  background: #f8f9ff;
+  border-radius: 16rpx;
+  margin-bottom: 20rpx;
+  transition: all 0.3s;
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+
+  &:active {
+    transform: scale(0.98);
+    background: #f0f2ff;
+  }
+}
+
+.recommend-icon {
+  font-size: 50rpx;
+  flex-shrink: 0;
+}
+
+.recommend-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8rpx;
+}
+
+.recommend-title {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: #333;
+}
+
+.recommend-desc {
+  font-size: 26rpx;
+  color: #999;
+  line-height: 1.4;
+}
+
+.recommend-arrow {
+  font-size: 40rpx;
+  color: #ccc;
+  flex-shrink: 0;
 }
 </style>

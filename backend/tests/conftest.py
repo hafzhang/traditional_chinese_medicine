@@ -6,8 +6,10 @@ import pytest
 import sys
 import os
 
-# Add backend directory to path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+# Add backend directory to path - handle both direct and subdirectory runs
+backend_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+if backend_dir not in sys.path:
+    sys.path.insert(0, backend_dir)
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
@@ -27,6 +29,12 @@ TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engin
 def db_session():
     """创建测试数据库会话"""
     from api.database import Base
+    # Import all models to ensure tables are created
+    from api.models import (
+        User, ConstitutionResult, Question, Food, Recipe,
+        Ingredient, ConstitutionInfo, Acupoint, SymptomAcupoint,
+        TongueDiagnosisRecord, Course
+    )
 
     Base.metadata.create_all(bind=engine)
     session = TestingSessionLocal()
@@ -42,8 +50,8 @@ def db_session():
 @pytest.fixture(scope="function")
 def client(db_session):
     """创建测试客户端"""
-    from api.database import get_db
-    from api.main import app
+    from api.database import get_db, get_db_optional
+    from main import app
 
     def override_get_db():
         try:
@@ -51,7 +59,14 @@ def client(db_session):
         finally:
             pass
 
+    def override_get_db_optional():
+        try:
+            yield db_session
+        finally:
+            pass
+
     app.dependency_overrides[get_db] = override_get_db
+    app.dependency_overrides[get_db_optional] = override_get_db_optional
     yield TestClient(app)
     app.dependency_overrides.clear()
 

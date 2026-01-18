@@ -12,7 +12,7 @@ from fastapi.responses import JSONResponse
 
 from api.config import settings
 from api.database import engine, Base
-from api.routers import constitution, health
+from api.routers import constitution, health, ingredients, recipes, acupoints, tongue, courses
 
 
 @asynccontextmanager
@@ -21,14 +21,18 @@ async def lifespan(app: FastAPI):
     # Startup
     print("[INFO] Starting Constitution Recognition API...")
     print(f"   Environment: {settings.ENVIRONMENT}")
-    print(f"   Database: {settings.DATABASE_URL[:20]}...")
-    print(f"   Redis: {settings.REDIS_URL[:20]}...")
+    print(f"   Database: {settings.DATABASE_URL[:20] if settings.DATABASE_URL else 'N/A'}...")
+    print(f"   Redis: {settings.REDIS_URL[:20] if settings.REDIS_URL else 'N/A'}...")
 
     yield
 
     # Shutdown
     print("[INFO] Shutting down Constitution Recognition API...")
-    await engine.dispose()
+    try:
+        if engine is not None:
+            await engine.dispose()
+    except Exception as e:
+        print(f"[WARNING] Error during engine disposal: {e}")
 
 
 # Create FastAPI application
@@ -53,6 +57,11 @@ app.add_middleware(
 # Include routers
 app.include_router(health.router, tags=["Health"])
 app.include_router(constitution.router, prefix="/api/v1", tags=["Constitution"])
+app.include_router(ingredients.router, prefix="/api/v1", tags=["Ingredients"])
+app.include_router(recipes.router, prefix="/api/v1", tags=["Recipes"])
+app.include_router(acupoints.router, prefix="/api/v1", tags=["Acupoints"])
+app.include_router(tongue.router, prefix="/api/v1", tags=["Tongue"])
+app.include_router(courses.router, prefix="/api/v1", tags=["Courses"])
 
 
 @app.get("/")

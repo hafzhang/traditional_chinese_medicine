@@ -2,7 +2,7 @@
 Database Configuration and Session Management
 """
 
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, Session
 from typing import Generator
@@ -62,7 +62,7 @@ def get_db_optional() -> Generator[Session | None, None, None]:
     try:
         db = SessionLocal()
         # Test connection
-        db.execute("SELECT 1")
+        db.execute(text("SELECT 1"))
         try:
             yield db
         finally:
@@ -74,6 +74,9 @@ def get_db_optional() -> Generator[Session | None, None, None]:
 
 def init_db():
     """Initialize database tables"""
-    from api.models import user, constitution_result, question, food, recipe
+    from api.models import (
+        user, constitution_result, question, food, recipe,
+        ingredient, acupoint, symptom_acupoint, tongue_diagnosis_record, course
+    )
     Base.metadata.create_all(bind=engine)
     print("✅ Database tables initialized")
