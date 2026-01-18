@@ -1,10 +1,5 @@
 <template>
   <view class="page-container">
-    <!-- 调试信息悬浮窗 -->
-    <view v-if="debugInfo" class="debug-overlay">
-      <text>{{ debugInfo }}</text>
-    </view>
-
     <view v-if="loading" class="loading">
       <view class="loading-spinner"></view>
       <view class="loading-text">加载中...</view>
@@ -135,32 +130,10 @@
 </template>
 
 <script setup>
-import { ref, computed, onUnmounted } from 'vue'
+import { ref, computed } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import { getResult } from '@/api/constitution.js'
 import { CONSTITUTION_INFO } from '@/data/constitution.js'
-
-// 调试状态
-const debugInfo = ref('')
-let debugTimer = null
-
-// 启动调试
-function startDebug() {
-  if (import.meta.env.DEV) {
-    debugTimer = setInterval(() => {
-       if (typeof window !== 'undefined') {
-         const lastReq = window.__LAST_REQUEST__
-         const lastErr = window.__LAST_ERROR__
-         
-         let info = 'DEBUG:\n'
-         if (lastReq) info += `Req: ${lastReq.url}\n`
-         if (lastErr) info += `Err: ${lastErr.msg}\n`
-         
-         debugInfo.value = info
-       }
-    }, 1000)
-  }
-}
 
 // 状态
 const resultId = ref('')
@@ -190,8 +163,6 @@ const displayScores = computed(() => {
 
 // 生命周期
 onLoad((options) => {
-  startDebug() // 启动调试
-
   if (options.resultId) {
     resultId.value = options.resultId
     loadResult()
@@ -213,10 +184,6 @@ onLoad((options) => {
   }
 })
 
-onUnmounted(() => {
-  if (debugTimer) clearInterval(debugTimer)
-})
-
 /**
  * 加载结果
  */
@@ -226,10 +193,18 @@ async function loadResult() {
     const res = await getResult(resultId.value)
     result.value = res.data
   } catch (error) {
-    uni.showToast({
-      title: '加载失败',
-      icon: 'none'
-    })
+    const cached = uni.getStorageSync('latestResult')
+    if (cached && (!resultId.value || cached.result_id === resultId.value)) {
+      result.value = cached
+      if (!resultId.value) {
+        resultId.value = cached.result_id
+      }
+    } else {
+      uni.showToast({
+        title: '加载失败',
+        icon: 'none'
+      })
+    }
   } finally {
     loading.value = false
   }
@@ -240,7 +215,7 @@ async function loadResult() {
  */
 function viewDetail() {
   uni.navigateTo({
-    url: `/pages/detail/detail?resultId=${resultId.value}`
+    url: `/pages/detail/detail?resultId=${resultId.value}&constitution=${result.value?.primary_constitution || ''}`
   })
 }
 
@@ -272,20 +247,6 @@ function retest() {
 </script>
 
 <style lang="scss" scoped>
-.debug-overlay {
-  position: fixed;
-  top: 20rpx;
-  right: 20rpx;
-  background: rgba(0, 0, 0, 0.8);
-  color: #0f0;
-  padding: 10rpx;
-  border-radius: 8rpx;
-  font-size: 20rpx;
-  z-index: 9999;
-  max-width: 600rpx;
-  word-break: break-all;
-}
-
 .loading {
   padding: 100rpx 0;
   display: flex;

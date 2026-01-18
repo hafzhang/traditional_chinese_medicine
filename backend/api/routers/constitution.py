@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 from typing import Dict, Any
 import uuid
 
-from api.database import get_db
+from api.database import get_db_optional
 from api.models import ConstitutionResult, User
 from api.schemas.constitution import (
     TestSubmitRequest,
@@ -28,7 +28,7 @@ analyzer = ConstitutionAnalyzer()
 async def submit_test(
     request_data: TestSubmitRequest,
     request: Request,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db_optional)
 ) -> Dict[str, Any]:
     """
     提交体质测试
@@ -36,7 +36,7 @@ async def submit_test(
     Args:
         request_data: 测试答案数据
         request: FastAPI Request对象
-        db: 数据库会话
+        db: 数据库会话（可选）
 
     Returns:
         测试结果，包含主要体质、次要体质和各项分数
@@ -48,29 +48,35 @@ async def submit_test(
         # 2. 生成结果ID
         result_id = str(uuid.uuid4())
 
-        # 3. 查找或创建用户
-        user_id = None
-        if request_data.user_id:
-            from api.models import User
-            user = db.query(User).filter(User.id == request_data.user_id).first()
-            if user:
-                user_id = user.id
+        # 3. 尝试保存到数据库（可选）
+        try:
+            # 查找或创建用户
+            user_id = None
+            if request_data.user_id:
+                from api.models import User
+                user = db.query(User).filter(User.id == request_data.user_id).first()
+                if user:
+                    user_id = user.id
 
-        # 4. 保存测试结果到数据库
-        result = ConstitutionResult(
-            id=result_id,
-            user_id=user_id,
-            primary_constitution=analysis_result["primary_constitution"],
-            secondary_constitutions=analysis_result["secondary_constitutions"],
-            scores=analysis_result["scores"],
-            answers=request_data.answers,
-            ip_address=request.client.host if request.client else None,
-            user_agent=request.headers.get("user-agent")
-        )
-        db.add(result)
-        db.commit()
+            # 保存测试结果到数据库
+            result = ConstitutionResult(
+                id=result_id,
+                user_id=user_id,
+                primary_constitution=analysis_result["primary_constitution"],
+                secondary_constitutions=analysis_result["secondary_constitutions"],
+                scores=analysis_result["scores"],
+                answers=request_data.answers,
+                ip_address=request.client.host if request.client else None,
+                user_agent=request.headers.get("user-agent")
+            )
+            db.add(result)
+            db.commit()
+        except Exception as db_error:
+            # 数据库操作失败不影响返回结果
+            print(f"[WARNING] Database save failed: {db_error}")
+            pass
 
-        # 5. 构建响应数据
+        # 4. 构建响应数据
         response_data = {
             "result_id": result_id,
             "primary_constitution": analysis_result["primary_constitution"],
@@ -89,14 +95,13 @@ async def submit_test(
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
-        db.rollback()
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
 
 @router.get("/result/{result_id}")
 async def get_result(
     result_id: str,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db_optional)
 ) -> Dict[str, Any]:
     """
     获取测试结果详情
@@ -108,7 +113,9 @@ async def get_result(
     Returns:
         完整的测试结果，包含体质特征和调理建议
     """
-    # 查询结果
+    if db is None:
+        raise HTTPException(status_code=503, detail="Database unavailable")
+
     result = db.query(ConstitutionResult).filter(
         ConstitutionResult.id == result_id
     ).first()
@@ -146,7 +153,7 @@ async def get_result(
 @router.get("/recommend/food", response_model=FoodRecommendationResponse)
 async def get_food_recommendations(
     constitution: str,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db_optional)
 ) -> Dict[str, Any]:
     """
     获取饮食推荐
@@ -214,26 +221,21 @@ async def get_food_recommendations(
 
 
 @router.get("/questions")
-async def get_questions(db: Session = Depends(get_db)) -> Dict[str, Any]:
+async def get_questions() -> Dict[str, Any]:
     """
     获取测试题目列表
-
-    Args:
-        db: 数据库会话
 
     Returns:
         30个测试题目
     """
-    from api.models import Question
-
-    questions = db.query(Question).order_by(Question.question_number).all()
+    from api.data.questions import QUESTIONS_DATA
 
     questions_data = [
         {
-            "number": q.question_number,
-            "content": q.content,
-            "constitution_type": q.constitution_type,
-            "options": q.options or {
+            "number": q["number"],
+            "content": q["content"],
+            "constitution_type": q["constitution_type"],
+            "options": {
                 "1": "没有",
                 "2": "很少",
                 "3": "有时",
@@ -241,7 +243,7 @@ async def get_questions(db: Session = Depends(get_db)) -> Dict[str, Any]:
                 "5": "总是"
             }
         }
-        for q in questions
+        for q in QUESTIONS_DATA
     ]
 
     return {

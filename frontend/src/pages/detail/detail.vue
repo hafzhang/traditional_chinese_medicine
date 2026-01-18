@@ -181,125 +181,50 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
-import { getResult } from '@/api/constitution.js'
 import { CONSTITUTION_INFO } from '@/data/constitution.js'
 
-// 状态
 const resultId = ref('')
 const constitution = ref('')
-const resultData = ref(null)
 const loading = ref(false)
 const error = ref('')
 
-// 计算属性 - 获取当前体质信息
 const currentConstitution = computed(() => {
   if (!constitution.value) return null
-  console.log('[Detail] constitution.value:', constitution.value)
-  console.log('[Detail] CONSTITUTION_INFO keys:', Object.keys(CONSTITUTION_INFO))
-  const info = CONSTITUTION_INFO[constitution.value]
-  console.log('[Detail] constitution info:', info)
-  return info
+  return CONSTITUTION_INFO[constitution.value] || null
 })
 
-// 从 URL 获取参数的辅助函数
-function getQueryParams() {
-  if (typeof window !== 'undefined' && window.location) {
-    console.log('[Detail] Full URL:', window.location.href)
-    console.log('[Detail] pathname:', window.location.pathname)
-    console.log('[Detail] search:', window.location.search)
-    console.log('[Detail] hash:', window.location.hash)
-
-    let params = {}
-
-    // 尝试从 search 获取 (?constitution=xxx)
-    if (window.location.search) {
-      const urlParams = new URLSearchParams(window.location.search)
-      for (const [key, value] of urlParams) {
-        params[key] = value
-      }
+function initFromStorage() {
+  const cached = uni.getStorageSync('latestResult')
+  if (cached) {
+    if (!constitution.value && cached.primary_constitution) {
+      constitution.value = cached.primary_constitution
     }
-
-    // 尝试从 hash 获取 (#/pages/detail/detail?constitution=xxx)
-    if (window.location.hash && window.location.hash.includes('?')) {
-      const hashQuery = window.location.hash.split('?')[1]
-      const urlParams = new URLSearchParams(hashQuery)
-      for (const [key, value] of urlParams) {
-        params[key] = value
-      }
+    if (!resultId.value && cached.result_id) {
+      resultId.value = cached.result_id
     }
-
-    console.log('[Detail] Parsed params:', params)
-    return params
   }
-  console.log('[Detail] Window not available')
-  return {}
 }
 
-// 初始化页面参数
-function initPageParams() {
-  // 先尝试从 uni-app 的 onLoad 获取（小程序环境）
-  // 如果 onLoad 不触发，在 H5 环境中手动获取 URL 参数
-  const params = getQueryParams()
+onLoad((options) => {
+  if (options) {
+    if (options.constitution) {
+      constitution.value = options.constitution
+    }
+    if (options.resultId) {
+      resultId.value = options.resultId
+    }
+  }
 
-  console.log('[Detail] URL params:', params)
+  if (!constitution.value) {
+    initFromStorage()
+  }
 
-  // 先设置 constitution 参数（优先级最高）
-  if (params.constitution) {
-    constitution.value = params.constitution
-    console.log('[Detail] Set constitution from URL:', constitution.value)
-  } else if (params.resultId) {
-    // 如果没有 constitution 但有 resultId，先显示 loading
-    resultId.value = params.resultId
-    loadResult()
-  } else {
-    // 都没有参数，显示错误
+  if (!constitution.value) {
     error.value = '缺少参数，无法查看体质详情'
   }
-}
-
-// uni-app 生命周期（小程序环境）
-onLoad((options) => {
-  console.log('[Detail] onLoad called:', options)
-  if (options && (options.constitution || options.resultId)) {
-    // onLoad 已处理，不需要重复
-    return
-  }
-  // 如果 onLoad 没有参数，尝试手动获取（H5 环境）
-  initPageParams()
 })
-
-// Vue 生命周期（H5 环境）
-onMounted(() => {
-  console.log('[Detail] onMounted called')
-  // 如果 constitution 还没设置，尝试从 URL 获取
-  if (!constitution.value && !resultId.value) {
-    initPageParams()
-  }
-})
-
-/**
- * 加载结果（如果有resultId）
- */
-async function loadResult() {
-  loading.value = true
-  try {
-    const res = await getResult(resultId.value)
-    resultData.value = res.data
-    if (!constitution.value) {
-      constitution.value = res.data.primary_constitution
-    }
-  } catch (err) {
-    console.error('Failed to load result:', err)
-    // 如果加载失败，仍然可以使用constitution参数（如果已设置）
-    if (!constitution.value) {
-      error.value = '加载失败，请返回重试'
-    }
-  } finally {
-    loading.value = false
-  }
-}
 
 /**
  * 查看饮食推荐
