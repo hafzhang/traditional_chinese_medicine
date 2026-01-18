@@ -17,8 +17,8 @@ class Settings(BaseSettings):
     HOST: str = "0.0.0.0"
     PORT: int = 8000
 
-    # Database
-    DATABASE_URL: str = "postgresql://postgres:postgres@localhost:5432/constitution_db"
+    # Database (使用 SQLite 开发环境)
+    DATABASE_URL: str = "sqlite:///./constitution.db"
     DATABASE_POOL_SIZE: int = 20
     DATABASE_MAX_OVERFLOW: int = 10
 

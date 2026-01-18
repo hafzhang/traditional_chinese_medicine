@@ -76,10 +76,6 @@
           :key="type"
           class="question-group"
         >
-          <view class="question-group-label">
-            <text class="group-icon">{{ CONSTITUTION_INFO[type]?.icon }}</text>
-            <text>{{ group.name }} ({{ group.start }}-{{ group.end }})</text>
-          </view>
           <view class="question-grid-group">
             <view
               v-for="idx in Array.from({ length: group.end - group.start + 1 }, (_, i) => group.start + i - 1)"
@@ -214,7 +210,7 @@ async function submitTest() {
   try {
     const res = await submitTestApi(answers.value)
 
-    // 保存结果ID
+    uni.setStorageSync('latestResult', res.data)
     uni.setStorageSync('resultId', res.data.result_id)
 
     // 跳转到结果页

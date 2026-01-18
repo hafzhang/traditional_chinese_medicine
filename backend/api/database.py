@@ -52,6 +52,26 @@ def get_db() -> Generator[Session, None, None]:
         db.close()
 
 
+def get_db_optional() -> Generator[Session | None, None, None]:
+    """
+    Optional database session dependency - returns None if DB unavailable
+
+    Yields:
+        Session | None: Database session or None
+    """
+    try:
+        db = SessionLocal()
+        # Test connection
+        db.execute("SELECT 1")
+        try:
+            yield db
+        finally:
+            db.close()
+    except Exception as e:
+        print(f"[WARNING] Database unavailable: {e}")
+        yield None
+
+
 def init_db():
     """Initialize database tables"""
     from api.models import user, constitution_result, question, food, recipe

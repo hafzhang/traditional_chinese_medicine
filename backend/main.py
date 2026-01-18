@@ -19,7 +19,7 @@ from api.routers import constitution, health
 async def lifespan(app: FastAPI):
     """Application lifespan events"""
     # Startup
-    print("🚀 Starting Constitution Recognition API...")
+    print("[INFO] Starting Constitution Recognition API...")
     print(f"   Environment: {settings.ENVIRONMENT}")
     print(f"   Database: {settings.DATABASE_URL[:20]}...")
     print(f"   Redis: {settings.REDIS_URL[:20]}...")
@@ -27,7 +27,7 @@ async def lifespan(app: FastAPI):
     yield
 
     # Shutdown
-    print("🛑 Shutting down Constitution Recognition API...")
+    print("[INFO] Shutting down Constitution Recognition API...")
     await engine.dispose()
 
 

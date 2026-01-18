@@ -67,13 +67,12 @@ function request(url, options = {}) {
       ...requestConfig,
       success: (res) => {
         console.log(`[API Response]`, res.statusCode, res.data)
-        
-        // 更新调试信息
+
         if (typeof window !== 'undefined') {
           window.__LAST_RESPONSE__ = {
-             status: res.statusCode,
-             data: res.data,
-             time: new Date().toLocaleTimeString()
+            status: res.statusCode,
+            data: res.data,
+            time: new Date().toLocaleTimeString()
           }
         }
 
@@ -88,6 +87,17 @@ function request(url, options = {}) {
             reject(res.data)
           }
         } else {
+          const isDbUnavailable =
+            res.statusCode === 503 &&
+            res.data &&
+            (res.data.detail === 'Database unavailable' ||
+              res.data.message === 'Database unavailable')
+
+          if (isDbUnavailable) {
+            reject(new Error('Database unavailable'))
+            return
+          }
+
           uni.showToast({
             title: `网络错误 (${res.statusCode})`,
             icon: 'none'
