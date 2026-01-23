@@ -5,14 +5,16 @@ FastAPI Application Entry Point
 """
 
 import uvicorn
+import os
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
 
 from api.config import settings
 from api.database import engine, Base
-from api.routers import constitution, health, ingredients, recipes, acupoints, tongue, courses
+from api.routers import constitution, health, ingredients, recipes, acupoints, tongue, courses, wellness
 
 
 @asynccontextmanager
@@ -45,6 +47,12 @@ app = FastAPI(
     lifespan=lifespan
 )
 
+# Mount static files
+static_dir = os.path.join(os.path.dirname(__file__), "static")
+if not os.path.exists(static_dir):
+    os.makedirs(static_dir)
+app.mount("/static", StaticFiles(directory=static_dir), name="static")
+
 # Configure CORS
 app.add_middleware(
     CORSMiddleware,
@@ -62,6 +70,7 @@ app.include_router(recipes.router, prefix="/api/v1", tags=["Recipes"])
 app.include_router(acupoints.router, prefix="/api/v1", tags=["Acupoints"])
 app.include_router(tongue.router, prefix="/api/v1", tags=["Tongue"])
 app.include_router(courses.router, prefix="/api/v1", tags=["Courses"])
+app.include_router(wellness.router, prefix="/api/v1", tags=["Wellness"])
 
 
 @app.get("/")

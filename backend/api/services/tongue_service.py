@@ -25,6 +25,7 @@ class TongueService:
     COATING_THICKNESS = ["薄苔", "厚苔", "腻苔", "剥落"]
 
     # 体质对应的舌象特征（简化版）
+    # 按优先级排序，优先级高的先匹配（当特征相同时优先返回前面的）
     CONSTITUTION_TONGUE_MAP = {
         "peace": {
             "tongue_color": "淡红",
@@ -38,12 +39,6 @@ class TongueService:
             "coating_color": "白苔",
             "coating_thickness": "薄苔"
         },
-        "yang_deficiency": {
-            "tongue_color": "淡白",
-            "tongue_shape": "胖大",
-            "coating_color": "白苔",
-            "coating_thickness": "腻苔"
-        },
         "yin_deficiency": {
             "tongue_color": "红",
             "tongue_shape": "瘦薄",
@@ -51,6 +46,12 @@ class TongueService:
             "coating_thickness": "薄苔"
         },
         "phlegm_damp": {
+            "tongue_color": "淡白",
+            "tongue_shape": "胖大",
+            "coating_color": "白苔",
+            "coating_thickness": "厚苔"
+        },
+        "yang_deficiency": {
             "tongue_color": "淡白",
             "tongue_shape": "胖大",
             "coating_color": "白苔",

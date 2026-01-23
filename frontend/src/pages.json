@@ -95,6 +95,12 @@
       "style": {
         "navigationBarTitleText": "课程详情"
       }
+    },
+    {
+      "path": "pages/debug/api-test",
+      "style": {
+        "navigationBarTitleText": "API测试"
+      }
     }
   ],
   "globalStyle": {

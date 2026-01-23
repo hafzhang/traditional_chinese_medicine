@@ -40,6 +40,7 @@ class AcupointService:
         skip: int = 0,
         limit: int = 20,
         body_part: Optional[str] = None,
+        meridian: Optional[str] = None,
         constitution: Optional[str] = None,
         search: Optional[str] = None
     ) -> tuple[List[Acupoint], int]:
@@ -51,6 +52,7 @@ class AcupointService:
             skip: 跳过数量
             limit: 限制数量
             body_part: 部位筛选
+            meridian: 经脉筛选
             constitution: 体质筛选
             search: 搜索关键词
 
@@ -62,6 +64,8 @@ class AcupointService:
         # 筛选条件
         if body_part:
             query = query.filter(Acupoint.body_part == body_part)
+        if meridian:
+            query = query.filter(Acupoint.meridian == meridian)
         if constitution:
             query = query.filter(Acupoint.suitable_constitutions.contains(constitution))
         if search:

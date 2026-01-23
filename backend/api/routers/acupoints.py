@@ -35,6 +35,7 @@ async def get_acupoints(
     skip: int = Query(0, ge=0, description="跳过数量"),
     limit: int = Query(20, ge=1, le=100, description="限制数量"),
     body_part: Optional[str] = Query(None, description="部位筛选"),
+    meridian: Optional[str] = Query(None, description="经脉筛选"),
     constitution: Optional[str] = Query(None, description="体质筛选"),
     search: Optional[str] = Query(None, description="搜索关键词"),
     db: Session = Depends(get_db_optional)
@@ -42,7 +43,7 @@ async def get_acupoints(
     """
     获取穴位列表
 
-    支持按部位、体质筛选和关键词搜索
+    支持按部位、经脉、体质筛选和关键词搜索
     """
     if db is None:
         raise HTTPException(status_code=503, detail="Database unavailable")
@@ -52,6 +53,7 @@ async def get_acupoints(
         skip=skip,
         limit=limit,
         body_part=body_part,
+        meridian=meridian,
         constitution=constitution,
         search=search
     )

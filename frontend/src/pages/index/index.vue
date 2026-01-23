@@ -17,176 +17,153 @@
       </view>
     </view>
 
-    <!-- 快速开始卡片 -->
-    <view class="section-card">
+    <!-- 功能导航区域 -->
+    <view class="features-section">
       <view class="section-header">
-        <text class="section-icon">📋</text>
-        <text class="section-title">测试说明</text>
-      </view>
-      <view class="intro-content">
-        <view class="intro-item">
-          <text class="intro-icon">✦</text>
-          <text class="intro-text">通过30个问题，科学识别您的中医体质类型</text>
-        </view>
-        <view class="intro-item">
-          <text class="intro-icon">✦</text>
-          <text class="intro-text">基于国家中医药管理局发布的CCMQ标准量表</text>
-        </view>
-        <view class="intro-item">
-          <text class="intro-icon">✦</text>
-          <text class="intro-text">获得个性化体质分析和养生建议</text>
-        </view>
-      </view>
-    </view>
-
-    <!-- 九种体质类型 -->
-    <view class="section-card">
-      <view class="section-header">
-        <text class="section-icon">☯</text>
-        <text class="section-title">九种体质类型</text>
+        <text class="section-title">功能导航</text>
+        <text class="section-desc">核心功能 - 一键直达</text>
       </view>
 
-      <view class="constitution-grid">
+      <view class="features-grid">
         <view
-          v-for="item in constitutionTypes"
-          :key="item.type"
-          class="constitution-card"
-          @click="viewConstitution(item)"
-          :class="'border-' + item.type"
+          v-for="item in features"
+          :key="item.id"
+          class="feature-card"
+          @click="navigateTo(item.path, item.isTabBar)"
         >
-          <view class="constitution-header" :style="{ background: item.color }">
-            <text class="constitution-icon">{{ item.icon }}</text>
-            <text class="constitution-mini-name">{{ item.name }}</text>
+          <view class="feature-icon-wrapper" :style="{ background: item.gradient }">
+            <text class="feature-icon">{{ item.icon }}</text>
           </view>
-        </view>
-      </view>
-    </view>
-
-    <!-- 功能特点 -->
-    <view class="section-card">
-      <view class="section-header">
-        <text class="section-icon">⭐</text>
-        <text class="section-title">功能特点</text>
-      </view>
-
-      <view class="feature-list">
-        <view class="feature-card" v-for="(item, index) in features" :key="index" @click="handleFeatureClick(item)">
-          <view class="feature-icon" :style="{ background: item.bgColor }">
-            <text class="feature-emoji">{{ item.icon }}</text>
-          </view>
-          <view class="feature-content">
+          <view class="feature-info">
             <view class="feature-title">{{ item.title }}</view>
             <view class="feature-desc">{{ item.desc }}</view>
           </view>
-        </view>
-      </view>
-    </view>
-
-    <!-- 科学依据 -->
-    <view class="section-card science-section">
-      <view class="section-header">
-        <text class="section-icon">📚</text>
-        <text class="section-title">科学依据</text>
-      </view>
-
-      <view class="science-content">
-        <view class="science-item">
-          <view class="science-icon">🎓</view>
-          <view class="science-info">
-            <view class="science-title">王琦院士 CCMQ 标准</view>
-            <view class="science-text">中国中医科学院王琦院士团队研发，国家中医药管理局推广标准</view>
-          </view>
-        </view>
-        <view class="science-item">
-          <view class="science-icon">📊</view>
-          <view class="science-info">
-            <view class="science-title">大样本验证</view>
-            <view class="science-text">基于全国大样本流行病学调查，经过信度效度检验</view>
-          </view>
-        </view>
-        <view class="science-item">
-          <view class="science-icon">🔬</view>
-          <view class="science-info">
-            <view class="science-title">中医理论指导</view>
-            <view class="science-text">融合《黄帝内经》《金匮要略》等经典中医体质理论</view>
+          <view class="feature-action">
+            <text class="action-text">{{ item.actionText }}</text>
+            <text class="action-arrow">→</text>
           </view>
         </view>
       </view>
     </view>
 
-    <!-- 底部行动按钮 -->
-    <view class="bottom-action">
-      <button class="btn btn-primary btn-large btn-block" @click="startTest">
-        立即开始测试
-      </button>
+    <!-- 底部信息区域 -->
+    <view class="footer-section">
+      <view class="footer-item">
+        <text class="footer-icon">🎓</text>
+        <view class="footer-info">
+          <view class="footer-title">王琦院士 CCMQ 标准</view>
+          <view class="footer-desc">国家中医药管理局推广标准</view>
+        </view>
+      </view>
+      <view class="footer-item">
+        <text class="footer-icon">🔬</text>
+        <view class="footer-info">
+          <view class="footer-title">科学权威</view>
+          <view class="footer-desc">基于大样本流行病学调查</view>
+        </view>
+      </view>
     </view>
   </view>
 </template>
 
 <script setup>
 import { ref } from 'vue'
-import { CONSTITUTION_INFO } from '@/data/constitution.js'
 
-// 九种体质数据
-const constitutionTypes = ref(Object.values(CONSTITUTION_INFO).map(info => ({
-  type: info.type,
-  name: info.name,
-  icon: info.icon,
-  color: info.color,
-  shortDesc: info.description,
-  features: info.characteristics.overall.slice(0, 2)
-})))
-
-// 功能特点
+// 功能列表
 const features = ref([
   {
+    id: 1,
     icon: '📋',
-    title: '科学量表',
-    desc: '采用国家中医药管理局发布的CCMQ标准量表',
-    bgColor: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+    title: '体质测试',
+    desc: '30道科学问题，精准识别您的体质类型',
+    gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+    actionText: '立即测试',
+    path: '/pages/test/test',
+    isTabBar: true
   },
   {
-    icon: '🎯',
-    title: '精准识别',
-    desc: '通过算法精确计算，识别主要体质和次要体质',
-    bgColor: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)'
+    id: 2,
+    icon: '🥬',
+    title: '食材库',
+    desc: '基于体质推荐的健康食材，了解性味归经',
+    gradient: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)',
+    actionText: '查看食材',
+    path: '/pages/ingredients/list',
+    isTabBar: false
   },
   {
-    icon: '🥗',
-    title: '饮食推荐',
-    desc: '根据体质类型提供个性化的饮食建议',
-    bgColor: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)'
+    id: 3,
+    icon: '🍲',
+    title: '食谱库',
+    desc: '根据体质推荐的养生食谱和食疗方案',
+    gradient: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)',
+    actionText: '查看食谱',
+    path: '/pages/recipes/list',
+    isTabBar: false
+  },
+  {
+    id: 4,
+    icon: '📍',
+    title: '穴位查找',
+    desc: '按症状/部位/经络查找穴位，按摩调理',
+    gradient: 'linear-gradient(135deg, #30cfd0 0%, #330867 100%)',
+    actionText: '开始查找',
+    path: '/pages/acupoints/list',
+    isTabBar: false
+  },
+  {
+    id: 5,
+    icon: '👅',
+    title: 'AI舌诊',
+    desc: '通过舌象分析体质倾向，智能健康评估',
+    gradient: 'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)',
+    actionText: '开始诊断',
+    path: '/pages/tongue/index',
+    isTabBar: false
+  },
+  {
+    id: 6,
+    icon: '📚',
+    title: '养生课程',
+    desc: '根据体质推荐的健康养生课程',
+    gradient: 'linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%)',
+    actionText: '浏览课程',
+    path: '/pages/courses/list',
+    isTabBar: false
   }
 ])
 
 /**
- * 开始测试
+ * 开始体质测试
  */
 function startTest() {
-  console.log('startTest clicked')
   uni.switchTab({
     url: '/pages/test/test'
   })
 }
 
 /**
- * 查看体质详情
+ * 页面导航
  */
-function viewConstitution(item) {
-  // 跳转到体质详情页，直接传递体质类型参数
-  uni.navigateTo({
-    url: `/pages/detail/detail?constitution=${item.type}`
-  })
-}
-
-/**
- * 处理功能卡片点击
- */
-function handleFeatureClick(item) {
-  // 如果点击的是饮食推荐卡片，跳转到饮食列表页
-  if (item.icon === '🥗') {
+function navigateTo(path, isTabBar) {
+  if (isTabBar) {
+    uni.switchTab({
+      url: path,
+      fail: () => {
+        console.log('switchTab failed, trying navigateTo')
+        uni.navigateTo({ url: path })
+      }
+    })
+  } else {
     uni.navigateTo({
-      url: '/pages/food/list'
+      url: path,
+      fail: (err) => {
+        console.error('导航失败:', err)
+        uni.showToast({
+          title: '页面开发中',
+          icon: 'none'
+        })
+      }
     })
   }
 }
@@ -194,15 +171,14 @@ function handleFeatureClick(item) {
 
 <style lang="scss" scoped>
 .page-container {
-  background: #f5f5f5;
   min-height: 100vh;
-  padding-bottom: 40rpx;
+  background: #f5f5f5;
 }
 
 /* Hero 区域 */
 .hero-section {
   position: relative;
-  padding: 60rpx 30rpx 40rpx;
+  padding: 60rpx 30rpx 50rpx;
   overflow: hidden;
 }
 
@@ -213,7 +189,8 @@ function handleFeatureClick(item) {
   right: 0;
   bottom: 0;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  z-index: 0;
+  border-bottom-left-radius: 40rpx;
+  border-bottom-right-radius: 40rpx;
 }
 
 .hero-content {
@@ -224,13 +201,13 @@ function handleFeatureClick(item) {
 }
 
 .hero-icon {
-  font-size: 120rpx;
+  font-size: 100rpx;
   margin-bottom: 20rpx;
-  opacity: 0.9;
+  opacity: 0.95;
 }
 
 .hero-title {
-  font-size: 52rpx;
+  font-size: 48rpx;
   font-weight: 700;
   margin-bottom: 16rpx;
   letter-spacing: 2rpx;
@@ -244,41 +221,26 @@ function handleFeatureClick(item) {
 
 .hero-actions {
   display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 20rpx;
+  justify-content: center;
 }
 
-.hero-note {
-  font-size: 24rpx;
-  opacity: 0.8;
-}
-
-/* 卡片通用样式 */
-.section-card {
-  background: #fff;
-  margin: 30rpx;
-  border-radius: 24rpx;
-  padding: 30rpx;
-  box-shadow: 0 4rpx 20rpx rgba(0, 0, 0, 0.06);
+/* 功能导航区域 */
+.features-section {
+  padding: 40rpx 30rpx;
 }
 
 .section-header {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 12rpx;
   margin-bottom: 30rpx;
-}
-
-.section-icon {
-  font-size: 36rpx;
 }
 
 .section-title {
   font-size: 36rpx;
   font-weight: 700;
   color: #1a1a1a;
-  flex: 1;
+  margin-bottom: 8rpx;
 }
 
 .section-desc {
@@ -286,81 +248,8 @@ function handleFeatureClick(item) {
   color: #999;
 }
 
-/* 测试说明 */
-.intro-content {
-  display: flex;
-  flex-direction: column;
-  gap: 20rpx;
-}
-
-.intro-item {
-  display: flex;
-  align-items: flex-start;
-  gap: 12rpx;
-}
-
-.intro-icon {
-  color: #667eea;
-  font-size: 28rpx;
-  flex-shrink: 0;
-}
-
-.intro-text {
-  font-size: 28rpx;
-  color: #555;
-  line-height: 1.6;
-}
-
-/* 体质网格 */
-.constitution-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 20rpx;
-}
-
-.constitution-card {
-  background: #fff;
-  border-radius: 16rpx;
-  overflow: hidden;
-  border: 2rpx solid #f0f0f0;
-  transition: all 0.3s;
-}
-
-.constitution-card:active {
-  transform: scale(0.95);
-}
-
-.constitution-header {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 12rpx;
-  padding: 30rpx 20rpx;
-  color: #fff;
-}
-
-.constitution-icon {
-  font-size: 40rpx;
-}
-
-.constitution-mini-name {
-  font-size: 28rpx;
-  font-weight: 600;
-}
-
-/* 边框颜色 */
-.border-peace { border-color: #52c41a; }
-.border-qi_deficiency { border-color: #faad14; }
-.border-yang_deficiency { border-color: #1890ff; }
-.border-yin_deficiency { border-color: #eb2f96; }
-.border-phlegm_damp { border-color: #722ed1; }
-.border-damp_heat { border-color: #fa541c; }
-.border-blood_stasis { border-color: #f5222d; }
-.border-qi_depression { border-color: #13c2c2; }
-.border-special { border-color: #52c41a; }
-
-/* 功能特点 */
-.feature-list {
+/* 功能网格 */
+.features-grid {
   display: flex;
   flex-direction: column;
   gap: 20rpx;
@@ -369,105 +258,154 @@ function handleFeatureClick(item) {
 .feature-card {
   display: flex;
   align-items: center;
-  gap: 20rpx;
-  padding: 24rpx;
-  background: #f8f9ff;
-  border-radius: 16rpx;
-  transition: all 0.3s;
+  background: #fff;
+  border-radius: 20rpx;
+  padding: 28rpx 24rpx;
+  box-shadow: 0 4rpx 20rpx rgba(0, 0, 0, 0.08);
+  transition: all 0.3s ease;
 }
 
 .feature-card:active {
   transform: scale(0.98);
-  opacity: 0.8;
+  box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.12);
 }
 
-.feature-icon {
-  width: 80rpx;
-  height: 80rpx;
+.feature-icon-wrapper {
+  width: 88rpx;
+  height: 88rpx;
   border-radius: 16rpx;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  margin-right: 20rpx;
+  box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.15);
 }
 
-.feature-emoji {
-  font-size: 40rpx;
+.feature-icon {
+  font-size: 44rpx;
 }
 
-.feature-content {
+.feature-info {
   flex: 1;
+  min-width: 0;
 }
 
 .feature-title {
-  font-size: 30rpx;
+  font-size: 32rpx;
   font-weight: 600;
   color: #1a1a1a;
   margin-bottom: 8rpx;
 }
 
 .feature-desc {
-  font-size: 26rpx;
-  color: #666;
-  line-height: 1.5;
-}
-
-/* 科学依据 */
-.science-section {
-  background: linear-gradient(135deg, #f5f7fa 0%, #e4e8eb 100%);
-}
-
-.science-content {
-  display: flex;
-  flex-direction: column;
-  gap: 30rpx;
-}
-
-.science-item {
-  display: flex;
-  gap: 20rpx;
-  padding: 24rpx;
-  background: #fff;
-  border-radius: 16rpx;
-  box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.04);
-}
-
-.science-icon {
-  width: 70rpx;
-  height: 70rpx;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 32rpx;
-  flex-shrink: 0;
-}
-
-.science-info {
-  flex: 1;
-}
-
-.science-title {
-  font-size: 28rpx;
-  font-weight: 600;
-  color: #1a1a1a;
-  margin-bottom: 8rpx;
-}
-
-.science-text {
   font-size: 24rpx;
   color: #666;
   line-height: 1.5;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
 }
 
-/* 底部行动按钮 */
-.bottom-action {
+.feature-action {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+  flex-shrink: 0;
+  margin-left: 12rpx;
+}
+
+.action-text {
+  font-size: 24rpx;
+  color: #667eea;
+  font-weight: 500;
+}
+
+.action-arrow {
+  font-size: 32rpx;
+  color: #667eea;
+  font-weight: 300;
+}
+
+/* 底部信息区域 */
+.footer-section {
   padding: 0 30rpx 40rpx;
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
+}
+
+.footer-item {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+  background: #fff;
+  padding: 24rpx;
+  border-radius: 16rpx;
+  box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.06);
+}
+
+.footer-icon {
+  font-size: 36rpx;
+  flex-shrink: 0;
+}
+
+.footer-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6rpx;
+}
+
+.footer-title {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: #1a1a1a;
+}
+
+.footer-desc {
+  font-size: 24rpx;
+  color: #999;
+}
+
+/* 按钮样式 */
+.btn {
+  border: none;
+  border-radius: 50rpx;
+  padding: 28rpx 48rpx;
+  font-size: 32rpx;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.btn-primary {
+  background: #fff;
+  color: #667eea;
+  box-shadow: 0 8rpx 24rpx rgba(0, 0, 0, 0.15);
+}
+
+.btn-primary:active {
+  transform: scale(0.95);
+  box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.2);
 }
 
 .btn-large {
-  padding: 32rpx 48rpx;
+  padding: 32rpx 64rpx;
+  font-size: 32rpx;
+}
+
+.btn-block {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12rpx;
+  min-width: 400rpx;
+}
+
+.btn-icon {
   font-size: 32rpx;
 }
 </style>

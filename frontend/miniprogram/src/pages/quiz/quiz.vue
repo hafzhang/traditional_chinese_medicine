@@ -82,6 +82,12 @@ const loadQuestions = async () => {
 
 const selectAnswer = (value) => {
   answers.value[currentIndex.value] = value
+  // 自动跳转到下一题
+  if (currentIndex.value < questions.value.length - 1) {
+    setTimeout(() => {
+      nextQuestion()
+    }, 300)
+  }
 }
 
 const prevQuestion = () => {

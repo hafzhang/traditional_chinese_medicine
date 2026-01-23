@@ -73,13 +73,13 @@ class ConstitutionResult(Base):
 
 
 class Ingredient(Base):
-    """食材库表 - Phase 1 更新版"""
+    """食材库表 - Phase 1 更新版 + 营养增强版"""
     __tablename__ = "ingredients"
 
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     name = Column(String(50), nullable=False)
     aliases = Column(JSON)  # 别名列表，如 ["怀山药", "淮山"]
-    category = Column(String(50))  # 类别：谷物、蔬菜、水果、肉类、药材
+    category = Column(String(50))  # 类别：谷物、蔬菜、水果、肉类、药材、调味品、海鲜、坚果、菌藻、豆类
 
     # 性味归经
     nature = Column(String(20))  # 寒、凉、平、温、热
@@ -94,15 +94,59 @@ class Ingredient(Base):
     efficacy = Column(Text)  # 功效描述，如 "健脾养胃、补肺益肾"
     nutrition = Column(Text)  # 营养成分说明
 
+    # 营养数据 (每100g)
+    calories = Column(Float, default=0)  # 热量 (kcal)
+    protein = Column(Float, default=0)  # 蛋白质 (g)
+    fat = Column(Float, default=0)  # 脂肪 (g)
+    carbohydrates = Column(Float, default=0)  # 碳水化合物 (g)
+    dietary_fiber = Column(Float, default=0)  # 膳食纤维 (g)
+
+    # 维生素含量 (每100g)
+    vitamin_a = Column(Float)  # 维生素A (μgRAE)
+    vitamin_b1 = Column(Float)  # 维生素B1 (mg)
+    vitamin_b2 = Column(Float)  # 维生素B2 (mg)
+    vitamin_c = Column(Float)  # 维生素C (mg)
+    vitamin_e = Column(Float)  # 维生素E (mg)
+
+    # 矿物质含量 (每100g)
+    calcium = Column(Float)  # 钙 (mg)
+    iron = Column(Float)  # 铁 (mg)
+    zinc = Column(Float)  # 锌 (mg)
+    potassium = Column(Float)  # 钾 (mg)
+    sodium = Column(Float)  # 钠 (mg)
+    iodine = Column(Float)  # 碘 (μg)
+    selenium = Column(Float)  # 硒 (μg)
+
     # 食用指导
     cooking_methods = Column(JSON)  # 食用方法列表，如 ["蒸", "煮", "炖"]
     daily_dosage = Column(String(50))  # 每日用量，如 "50-100g"
     best_time = Column(String(50))  # 最佳食用时间，如 "早晚餐"
     precautions = Column(Text)  # 注意事项
 
-    # 搭配
-    compatible_with = Column(JSON)  # 宜配食材，如 ["莲子", "枸杞"]
-    incompatible_with = Column(JSON)  # 忌配食材，如 ["碱性食物"]
+    # 增强搭配信息 (带原因说明)
+    compatible_foods = Column(JSON)  # 宜配食材列表 [{"name": "莲子", "reason": "健脾益气", "benefit": "适合气血两虚"}]
+    incompatible_foods = Column(JSON)  # 忌配食材列表 [{"name": "碱性食物", "reason": "破坏黏液蛋白", "effect": "降低营养价值"}]
+    classic_combinations = Column(JSON)  # 经典搭配 [{"name": "山药+红枣", "benefit": "健脾益气", "target": "气血两虚"}]
+
+    # 储存与安全
+    storage_method = Column(String(50))  # 储存方法：常温、冷藏、冷冻
+    storage_temperature = Column(String(30))  # 储存温度，如 "10-15℃"
+    storage_humidity = Column(String(30))  # 储存湿度，如 "85-90%"
+    shelf_life = Column(String(30))  # 保质期，如 "1-2个月"
+    preservation_tips = Column(Text)  # 保鲜技巧
+
+    # 食材安全
+    pesticide_risk = Column(String(20))  # 农药残留风险：高、中、低
+    heavy_metal_risk = Column(String(20))  # 重金属风险：高、中、低
+    microbe_risk = Column(String(20))  # 微生物风险：高、中、低
+    safety_precautions = Column(Text)  # 安全注意事项
+
+    # 烹饪方法详情
+    cooking_details = Column(JSON)  # 烹饪详情 [{"method": "煮", "time": "30分钟", "temperature": "100℃", "tips": "小火慢煮"}]
+
+    # 季节推荐
+    best_seasons = Column(JSON)  # 最佳季节，如 ["春", "秋", "冬"]
+    seasonal_benefits = Column(JSON)  # 季节功效 [{"season": "夏", "benefit": "清热解暑"}]
 
     # 展示
     image_url = Column(String(255))
@@ -138,12 +182,12 @@ class Food(Base):
 
 
 class Recipe(Base):
-    """食谱库表 - Phase 1 更新版"""
+    """食谱库表 - Phase 1 更新版 + 营养分析版"""
     __tablename__ = "recipes"
 
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     name = Column(String(100), nullable=False)
-    type = Column(String(50))  # 类型：粥类、汤类、茶饮、菜肴
+    type = Column(String(50))  # 类型：粥类、汤类、茶饮、菜肴、主食、甜品小吃
     difficulty = Column(String(20))  # 难度：简单、中等、困难
     cook_time = Column(Integer)  # 烹饪时间（分钟）
     servings = Column(Integer)  # 份量
@@ -162,16 +206,41 @@ class Recipe(Base):
     health_benefits = Column(Text)  # 健康益处
     precautions = Column(Text)  # 注意事项
 
+    # 营养分析 (每份)
+    calories = Column(Float, default=0)  # 热量 (kcal/份)
+    protein = Column(Float, default=0)  # 蛋白质 (g/份)
+    fat = Column(Float, default=0)  # 脂肪 (g/份)
+    carbohydrates = Column(Float, default=0)  # 碳水化合物 (g/份)
+    dietary_fiber = Column(Float, default=0)  # 膳食纤维 (g/份)
+
+    # 营养素含量详情
+    nutrition_summary = Column(JSON)  # 营养摘要 {"calories": 150, "protein": 8, "fat": 1, "carbs": 25}
+    key_nutrients = Column(JSON)  # 关键营养素 [{"name": "维生素A", "amount": 1200, "unit": "μgRAE"}]
+
+    # 烹饪方法详情
+    cooking_method = Column(String(30))  # 主要烹饪方法：煮、蒸、炒、炖、炸、烤
+    cooking_temperature = Column(String(30))  # 烹饪温度，如 "100-150℃"
+    nutrition_tips = Column(Text)  # 营养提示
+
+    # 中医食疗信息
+    tcm_efficacy = Column(Text)  # 中医功效
+    tcm_target = Column(JSON)  # 中医适用人群 [{"constitution": "qi_deficiency", "symptoms": ["乏力", "气短"]}]
+    contraindications = Column(JSON)  # 禁忌人群 [{"type": "实热证", "reason": "本品温补"}]
+
     # 标签
-    tags = Column(JSON)  # 标签列表，如 ["健脾养胃", "补气"]
+    tags = Column(JSON)  # 标签列表，如 ["健脾养胃", "补气", "安神"]
+    meal_type = Column(String(20))  # 餐次类型：早餐、午餐、晚餐、加餐、夜宵
 
     # 展示
     image_url = Column(String(255))
     description = Column(Text)
+    source = Column(String(100))  # 来源，如 "《本草纲目》"
 
     # 统计
     view_count = Column(Integer, default=0)
     favorite_count = Column(Integer, default=0)
+    rating = Column(Float, default=0)  # 评分
+    review_count = Column(Integer, default=0)  # 评论数
 
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, onupdate=func.now())
@@ -226,6 +295,8 @@ class Acupoint(Base):
 
     # 展示
     image_url = Column(String(255))
+    anatomical_image_url = Column(String(255)) # 解剖图
+    model_3d_url = Column(String(255)) # 3D模型
 
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, onupdate=func.now())

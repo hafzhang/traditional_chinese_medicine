@@ -65,9 +65,10 @@ class IngredientService:
         if nature:
             query = query.filter(Ingredient.nature == nature)
         if search:
+            # 搜索名称和功效（使用 OR 条件）
             query = query.filter(
                 (Ingredient.name.like(f"%{search}%")) |
-                (Ingredient.aliases.like(f"%{search}%"))
+                (Ingredient.efficacy.like(f"%{search}%"))
             )
 
         # 总数
@@ -282,6 +283,215 @@ class IngredientService:
             elif "热" in ingredient.nature or "温" in ingredient.nature:
                 return f"{ingredient.nature}性，可能加重{self.get_constitution_name(constitution)}"
         return "不建议食用"
+
+    def get_ingredients_by_nutrition(
+        self,
+        db: Session,
+        skip: int = 0,
+        limit: int = 20,
+        min_calories: Optional[float] = None,
+        max_calories: Optional[float] = None,
+        min_protein: Optional[float] = None,
+        max_fat: Optional[float] = None,
+        high_fiber: bool = False,
+        sort_by: Optional[str] = None
+    ) -> tuple[List[Ingredient], int]:
+        """
+        按营养素筛选食材
+
+        Args:
+            db: 数据库会话
+            skip: 跳过数量
+            limit: 限制数量
+            min_calories: 最小热量
+            max_calories: 最大热量
+            min_protein: 最小蛋白质
+            max_fat: 最大脂肪
+            high_fiber: 高纤维
+            sort_by: 排序字段 (calories, protein, fat, fiber)
+
+        Returns:
+            (食材列表, 总数)
+        """
+        query = db.query(Ingredient).filter(Ingredient.is_deleted == False)
+
+        # 热量筛选
+        if min_calories is not None:
+            query = query.filter(Ingredient.calories >= min_calories)
+        if max_calories is not None:
+            query = query.filter(Ingredient.calories <= max_calories)
+
+        # 蛋白质筛选
+        if min_protein is not None:
+            query = query.filter(Ingredient.protein >= min_protein)
+
+        # 脂肪筛选
+        if max_fat is not None:
+            query = query.filter(Ingredient.fat <= max_fat)
+
+        # 高纤维筛选
+        if high_fiber:
+            query = query.filter(Ingredient.dietary_fiber >= 5.0)
+
+        # 总数
+        total = query.count()
+
+        # 排序
+        if sort_by == "calories":
+            ingredients = query.order_by(Ingredient.calories.desc()).offset(skip).limit(limit).all()
+        elif sort_by == "protein":
+            ingredients = query.order_by(Ingredient.protein.desc()).offset(skip).limit(limit).all()
+        elif sort_by == "fiber":
+            ingredients = query.order_by(Ingredient.dietary_fiber.desc()).offset(skip).limit(limit).all()
+        else:
+            ingredients = query.order_by(Ingredient.view_count.desc()).offset(skip).limit(limit).all()
+
+        return ingredients, total
+
+    def get_ingredient_nutrition_detail(
+        self,
+        ingredient_id: str,
+        db: Session
+    ) -> Optional[Dict[str, Any]]:
+        """
+        获取食材营养详情
+
+        Args:
+            ingredient_id: 食材ID
+            db: 数据库会话
+
+        Returns:
+            营养详情字典
+        """
+        ingredient = self.get_ingredient_by_id(ingredient_id, db)
+        if not ingredient:
+            return None
+
+        return {
+            "id": ingredient.id,
+            "name": ingredient.name,
+            "category": ingredient.category,
+            "nature": ingredient.nature,
+            "flavor": ingredient.flavor,
+            "meridians": ingredient.meridians,
+
+            # 基础营养 (每100g)
+            "basic_nutrition": {
+                "calories": ingredient.calories,
+                "protein": ingredient.protein,
+                "fat": ingredient.fat,
+                "carbohydrates": ingredient.carbohydrates,
+                "dietary_fiber": ingredient.dietary_fiber
+            },
+
+            # 维生素
+            "vitamins": {
+                "vitamin_a": ingredient.vitamin_a,
+                "vitamin_b1": ingredient.vitamin_b1,
+                "vitamin_b2": ingredient.vitamin_b2,
+                "vitamin_c": ingredient.vitamin_c,
+                "vitamin_e": ingredient.vitamin_e
+            },
+
+            # 矿物质
+            "minerals": {
+                "calcium": ingredient.calcium,
+                "iron": ingredient.iron,
+                "zinc": ingredient.zinc,
+                "potassium": ingredient.potassium,
+                "sodium": ingredient.sodium,
+                "iodine": ingredient.iodine,
+                "selenium": ingredient.selenium
+            },
+
+            # 食用指导
+            "consumption_guide": {
+                "daily_dosage": ingredient.daily_dosage,
+                "best_time": ingredient.best_time,
+                "cooking_methods": ingredient.cooking_methods,
+                "precautions": ingredient.precautions
+            },
+
+            # 搭配信息
+            "pairing": {
+                "compatible_foods": ingredient.compatible_foods,
+                "incompatible_foods": ingredient.incompatible_foods,
+                "classic_combinations": ingredient.classic_combinations
+            },
+
+            # 储存与安全
+            "storage_safety": {
+                "storage_method": ingredient.storage_method,
+                "storage_temperature": ingredient.storage_temperature,
+                "storage_humidity": ingredient.storage_humidity,
+                "shelf_life": ingredient.shelf_life,
+                "preservation_tips": ingredient.preservation_tips,
+                "pesticide_risk": ingredient.pesticide_risk,
+                "heavy_metal_risk": ingredient.heavy_metal_risk,
+                "microbe_risk": ingredient.microbe_risk,
+                "safety_precautions": ingredient.safety_precautions
+            },
+
+            # 烹饪详情
+            "cooking_details": ingredient.cooking_details,
+
+            # 季节推荐
+            "seasonal_info": {
+                "best_seasons": ingredient.best_seasons,
+                "seasonal_benefits": ingredient.seasonal_benefits
+            },
+
+            # 其他
+            "image_url": ingredient.image_url,
+            "description": ingredient.description,
+            "efficacy": ingredient.efficacy
+        }
+
+    def get_nutrient_rich_ingredients(
+        self,
+        nutrient: str,
+        db: Session,
+        limit: int = 20
+    ) -> List[Ingredient]:
+        """
+        获取富含特定营养素的食材
+
+        Args:
+            nutrient: 营养素名称 (protein, fiber, calcium, iron, vitamin_c, etc.)
+            db: 数据库会话
+            limit: 限制数量
+
+        Returns:
+            食材列表
+        """
+        query = db.query(Ingredient).filter(
+            Ingredient.is_deleted == False
+        )
+
+        # 根据营养素名称排序
+        nutrient_column_map = {
+            "protein": Ingredient.protein,
+            "fiber": Ingredient.dietary_fiber,
+            "calcium": Ingredient.calcium,
+            "iron": Ingredient.iron,
+            "zinc": Ingredient.zinc,
+            "potassium": Ingredient.potassium,
+            "vitamin_a": Ingredient.vitamin_a,
+            "vitamin_c": Ingredient.vitamin_c,
+            "vitamin_e": Ingredient.vitamin_e,
+            "calories": Ingredient.calories
+        }
+
+        column = nutrient_column_map.get(nutrient)
+        if column:
+            # 筛选该营养素大于0的食材
+            query = query.filter(column > 0)
+            ingredients = query.order_by(column.desc()).limit(limit).all()
+        else:
+            # 默认按浏览量排序
+            ingredients = query.order_by(Ingredient.view_count.desc()).limit(limit).all()
+
+        return ingredients
 
 
 # 单例模式

@@ -8,12 +8,6 @@
 
     <!-- 问题卡片 -->
     <view class="question-card" v-if="currentQuestion">
-      <!-- 体质类型标签 -->
-      <view v-if="currentConstitutionType" class="constitution-tag" :style="{ background: currentConstitutionType.color }">
-        <text class="tag-icon">{{ CONSTITUTION_INFO[currentConstitutionType.type]?.icon || '☯' }}</text>
-        <text class="tag-name">{{ currentConstitutionType.name }}</text>
-      </view>
-
       <view class="question-number">问题 {{ currentQuestionIndex + 1 }}</view>
       <view class="question-content">{{ currentQuestion.content }}</view>
 
@@ -167,6 +161,12 @@ async function loadQuestions() {
  */
 function selectOption(value) {
   answers.value[currentQuestionIndex.value] = value
+  // 自动跳转到下一题，提升体验
+  if (currentQuestionIndex.value < 29) {
+    setTimeout(() => {
+      nextQuestion()
+    }, 300)
+  }
 }
 
 /**

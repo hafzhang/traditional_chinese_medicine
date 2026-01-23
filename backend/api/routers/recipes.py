@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from typing import Dict, Any, Optional
 
-from api.database import get_db_optional
+from api.database import get_db
 from api.services.recipe_service import get_recipe_service
 from pydantic import BaseModel
 
@@ -44,16 +44,13 @@ async def get_recipes(
     difficulty: Optional[str] = Query(None, description="难度筛选"),
     constitution: Optional[str] = Query(None, description="体质筛选"),
     search: Optional[str] = Query(None, description="搜索关键词"),
-    db: Session = Depends(get_db_optional)
+    db: Session = Depends(get_db)
 ) -> Dict[str, Any]:
     """
     获取食谱列表
 
     支持按类型、难度、体质筛选和关键词搜索
     """
-    if db is None:
-        raise HTTPException(status_code=503, detail="Database unavailable")
-
     recipes, total = recipe_service.get_recipes_list(
         db=db,
         skip=skip,
@@ -89,14 +86,11 @@ async def get_recipes(
 @router.get("/{recipe_id}", response_model=RecipeDetailResponse)
 async def get_recipe_detail(
     recipe_id: str,
-    db: Session = Depends(get_db_optional)
+    db: Session = Depends(get_db)
 ) -> Dict[str, Any]:
     """
     获取食谱详情
     """
-    if db is None:
-        raise HTTPException(status_code=503, detail="Database unavailable")
-
     recipe = recipe_service.get_recipe_by_id(recipe_id, db)
 
     if not recipe:
@@ -134,16 +128,13 @@ async def get_recipe_detail(
 @router.get("/recommend/{constitution}", response_model=RecipeRecommendationResponse)
 async def get_recipe_recommendation(
     constitution: str,
-    db: Session = Depends(get_db_optional)
+    db: Session = Depends(get_db)
 ) -> Dict[str, Any]:
     """
     根据体质获取三餐推荐食谱
 
     返回早餐、午餐、晚餐的推荐食谱
     """
-    if db is None:
-        raise HTTPException(status_code=503, detail="Database unavailable")
-
     if not recipe_service.is_valid_constitution_code(constitution):
         raise HTTPException(status_code=400, detail=f"Invalid constitution code: {constitution}")
 
