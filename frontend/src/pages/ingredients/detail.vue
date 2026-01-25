@@ -22,7 +22,6 @@
         <view class="tags">
           <text class="tag category">{{ ingredient.category }}</text>
           <text class="tag nature">{{ ingredient.nature }}</text>
-          <text class="tag flavor">{{ ingredient.flavor }}</text>
         </view>
       </view>
 
@@ -49,22 +48,9 @@
       </view>
 
       <!-- 食用指导 -->
-      <view class="info-card">
-        <view class="card-title">食用指导</view>
-        <view class="guide-list">
-          <view class="guide-item" v-if="ingredient.cooking_methods && ingredient.cooking_methods.length">
-            <text class="guide-label">食用方法：</text>
-            <text>{{ ingredient.cooking_methods.join('、') }}</text>
-          </view>
-          <view class="guide-item" v-if="ingredient.daily_dosage">
-            <text class="guide-label">每日用量：</text>
-            <text>{{ ingredient.daily_dosage }}</text>
-          </view>
-          <view class="guide-item" v-if="ingredient.best_time">
-            <text class="guide-label">最佳时间：</text>
-            <text>{{ ingredient.best_time }}</text>
-          </view>
-        </view>
+      <view class="info-card" v-if="ingredient.description">
+        <view class="card-title">🍽️ 使用指导</view>
+        <view class="card-content">{{ ingredient.description }}</view>
       </view>
 
       <!-- 注意事项 -->
@@ -75,15 +61,30 @@
 
       <!-- 搭配宜忌 -->
       <view class="info-card">
-        <view class="card-title">搭配宜忌</view>
+        <view class="card-title">🥗 搭配宜忌</view>
         <view class="compatible-list">
-          <view class="compatible-item good" v-if="ingredient.compatible_with && ingredient.compatible_with.length">
-            <text class="compatible-label">✅ 宜配：</text>
-            <text>{{ ingredient.compatible_with.join('、') }}</text>
+          <!-- 宜配食材 -->
+          <view class="compatible-section" v-if="ingredient.compatible_foods && ingredient.compatible_foods.length">
+            <view class="compatible-title good">✅ 宜配</view>
+            <view class="compatible-items">
+              <view class="compatible-item good" v-for="(food, index) in ingredient.compatible_foods" :key="index">
+                <view class="food-name">{{ food.name }}</view>
+                <view class="food-reason">{{ food.reason }}</view>
+                <view class="food-benefit" v-if="food.benefit">💡 {{ food.benefit }}</view>
+              </view>
+            </view>
           </view>
-          <view class="compatible-item bad" v-if="ingredient.incompatible_with && ingredient.incompatible_with.length">
-            <text class="compatible-label">❌ 忌配：</text>
-            <text>{{ ingredient.incompatible_with.join('、') }}</text>
+
+          <!-- 忌配食材 -->
+          <view class="compatible-section" v-if="ingredient.incompatible_foods && ingredient.incompatible_foods.length">
+            <view class="compatible-title bad">❌ 忌配</view>
+            <view class="compatible-items">
+              <view class="compatible-item bad" v-for="(food, index) in ingredient.incompatible_foods" :key="index">
+                <view class="food-name">{{ food.name }}</view>
+                <view class="food-reason">{{ food.reason }}</view>
+                <view class="food-effect" v-if="food.effect">⚠️ {{ food.effect }}</view>
+              </view>
+            </view>
           </view>
         </view>
       </view>
@@ -211,6 +212,9 @@ function getConstitutionNames(codes) {
   font-weight: bold;
   color: #333;
   margin-bottom: 20rpx;
+  display: flex;
+  align-items: center;
+  gap: 10rpx;
 }
 
 .card-content {
@@ -252,11 +256,6 @@ function getConstitutionNames(codes) {
     background: #f6ffed;
     color: #52c41a;
   }
-
-  &.flavor {
-    background: #fff7e6;
-    color: #fa8c16;
-  }
 }
 
 .meridians {
@@ -273,44 +272,79 @@ function getConstitutionNames(codes) {
   font-size: 26rpx;
 }
 
-.guide-list {
-  display: flex;
-  flex-direction: column;
-  gap: 15rpx;
-}
-
-.guide-item {
-  font-size: 28rpx;
-  color: #666;
-  line-height: 1.6;
-}
-
-.guide-label {
-  color: #333;
-  font-weight: 500;
-}
-
 .compatible-list {
   display: flex;
   flex-direction: column;
-  gap: 15rpx;
+  gap: 20rpx;
 }
 
-.compatible-item {
+.compatible-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10rpx;
+}
+
+.compatible-title {
   font-size: 28rpx;
-  line-height: 1.6;
+  font-weight: 500;
+  padding: 10rpx 20rpx;
+  border-radius: 8rpx;
 
   &.good {
+    background: #f6ffed;
     color: #52c41a;
   }
 
   &.bad {
+    background: #fff1f0;
     color: #ff4d4f;
   }
 }
 
-.compatible-label {
+.compatible-items {
+  display: flex;
+  flex-direction: column;
+  gap: 10rpx;
+  padding-left: 20rpx;
+}
+
+.compatible-item {
+  padding: 15rpx;
+  border-radius: 8rpx;
+  background: #fafafa;
+
+  &.good {
+    border-left: 3rpx solid #52c41a;
+  }
+
+  &.bad {
+    border-left: 3rpx solid #ff4d4f;
+  }
+}
+
+.food-name {
+  font-size: 28rpx;
   font-weight: 500;
+  color: #333;
+  margin-bottom: 6rpx;
+}
+
+.food-reason {
+  font-size: 26rpx;
+  color: #666;
+  line-height: 1.5;
+}
+
+.food-benefit {
+  font-size: 24rpx;
+  color: #1890ff;
+  margin-top: 6rpx;
+}
+
+.food-effect {
+  font-size: 24rpx;
+  color: #fa8c16;
+  margin-top: 6rpx;
 }
 
 .constitution-list {

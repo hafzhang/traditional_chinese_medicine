@@ -1,0 +1,48 @@
+{
+  "nuts": [
+    {
+      "name": "花生",
+      "nature": "平",
+      "flavor": "甘",
+      "efficacy": "健脾养胃润肺止咳"
+    }
+  ],
+  "medicinal": [
+    {
+      "name": "百合",
+      "nature": "微寒",
+      "flavor": "甘",
+      "efficacy": "养阴润肺清心安神"
+    },
+    {
+      "name": "桂圆",
+      "nature": "温",
+      "flavor": "甘",
+      "efficacy": "补益心脾养血安神"
+    },
+    {
+      "name": "红枣",
+      "nature": "温",
+      "flavor": "甘",
+      "efficacy": "补中益气养血安神"
+    },
+    {
+      "name": "莲子",
+      "nature": "平",
+      "flavor": "甘涩",
+      "efficacy": "健脾养心安神固精"
+    },
+    {
+      "name": "山楂",
+      "nature": "微温",
+      "flavor": "酸甘",
+      "efficacy": "消食化积行气散瘀"
+    },
+    {
+      "name": "薏米",
+      "nature": "凉",
+      "flavor": "甘淡",
+      "efficacy": "健脾渗湿利水消肿"
+    }
+  ]
+}

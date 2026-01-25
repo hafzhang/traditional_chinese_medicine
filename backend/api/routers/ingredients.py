@@ -88,7 +88,7 @@ async def get_ingredient_categories():
     """
     获取食材类别列表
 
-    新增类别: 海鲜、坚果、菌藻、豆类
+    标准分类: 谷物、蔬菜、水果、肉类、海鲜、调味品、菌藻、豆类、其他
     """
     categories = [
         {"value": "谷物", "label": "谷物"},
@@ -96,9 +96,7 @@ async def get_ingredient_categories():
         {"value": "水果", "label": "水果"},
         {"value": "肉类", "label": "肉类"},
         {"value": "海鲜", "label": "海鲜"},
-        {"value": "药材", "label": "药材"},
         {"value": "调味品", "label": "调味品"},
-        {"value": "坚果", "label": "坚果"},
         {"value": "菌藻", "label": "菌藻"},
         {"value": "豆类", "label": "豆类"},
         {"value": "其他", "label": "其他"}
