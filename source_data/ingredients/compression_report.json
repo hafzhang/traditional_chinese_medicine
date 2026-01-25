@@ -1,0 +1,61 @@
+{
+  "timestamp": "2026-01-25 15:05:51",
+  "target_directory": "C:\\Users\\Administrator\\Documents\\claude过滤蔬菜图",
+  "target_size_kb": 200,
+  "summary": {
+    "total_files": 445,
+    "files_compressed": 6,
+    "files_skipped": 439,
+    "files_failed": 0
+  },
+  "size_info": {
+    "original_total_mb": 48.49,
+    "compressed_total_mb": 46.73,
+    "space_saved_mb": 1.76,
+    "compression_percent": 3.6
+  },
+  "compressed_files": [
+    {
+      "filename": "芋头.jpg",
+      "original_kb": 531.03,
+      "compressed_kb": 180.2,
+      "method": "Resize 60% + Quality 45",
+      "saved_percent": 66.1
+    },
+    {
+      "filename": "茭白.jpg",
+      "original_kb": 487.3,
+      "compressed_kb": 182.46,
+      "method": "Resize 80% + Quality 45",
+      "saved_percent": 62.6
+    },
+    {
+      "filename": "韭菜花.jpg",
+      "original_kb": 434.41,
+      "compressed_kb": 195.64,
+      "method": "Resize 70% + Quality 45",
+      "saved_percent": 55.0
+    },
+    {
+      "filename": "沙葛.jpg",
+      "original_kb": 578.77,
+      "compressed_kb": 195.59,
+      "method": "Resize 40% + Quality 65",
+      "saved_percent": 66.2
+    },
+    {
+      "filename": "猪筒骨.jpg",
+      "original_kb": 594.59,
+      "compressed_kb": 184.43,
+      "method": "Resize 50% + Quality 55",
+      "saved_percent": 69.0
+    },
+    {
+      "filename": "皇帝柑.jpg",
+      "original_kb": 307.33,
+      "compressed_kb": 197.19,
+      "method": "Resize 80% + Quality 55",
+      "saved_percent": 35.8
+    }
+  ]
+}

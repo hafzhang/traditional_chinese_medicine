@@ -1,7 +1,8 @@
 {
   "permissions": {
     "allow": [
-      "Bash(npm run dev:h5:*)"
+      "Bash(npm run dev:h5:*)",
+      "Bash(python:*)"
     ]
   }
 }

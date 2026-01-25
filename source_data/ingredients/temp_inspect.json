@@ -1,0 +1,83 @@
+{
+  "total_rows": 444,
+  "columns": [
+    "name",
+    "category",
+    "nature",
+    "taste",
+    "efficacy",
+    "nutritional_value",
+    "contraindications",
+    "suitable_constitutions",
+    "avoid_constitutions",
+    "aliases",
+    "image_url"
+  ],
+  "first_5_rows": [
+    {
+      "name": "艾叶",
+      "category": "蔬菜类",
+      "nature": "温",
+      "taste": "苦辛",
+      "efficacy": "温经止血散寒调经安胎",
+      "nutritional_value": "富含挥发油维生素A维生素B1维生素C",
+      "contraindications": "阴虚血热者慎用",
+      "suitable_constitutions": "[\"阳虚质\",\"气虚质\"]",
+      "avoid_constitutions": "[\"阴虚质\"]",
+      "aliases": "[\"艾草\",\"艾叶子\"]",
+      "image_url": "/static/ingredients/艾叶.jpg"
+    },
+    {
+      "name": "鹌鹑蛋",
+      "category": "肉类",
+      "nature": "平",
+      "taste": "甘",
+      "efficacy": "补益气血健脑益智",
+      "nutritional_value": "富含蛋白质卵磷脂维生素AB族",
+      "contraindications": "痰湿体质慎用",
+      "suitable_constitutions": "[\"平和质\",\"气虚质\",\"阴虚质\"]",
+      "avoid_constitutions": "[\"痰湿质\"]",
+      "aliases": "[\"鹑鸟蛋\"]",
+      "image_url": "/static/ingredients/鹌鹑蛋.jpg"
+    },
+    {
+      "name": "八角瓜",
+      "category": "蔬菜类",
+      "nature": "凉",
+      "taste": "甘",
+      "efficacy": "清热解毒利尿消肿",
+      "nutritional_value": "含维生素C钾元素",
+      "contraindications": "脾胃虚寒者慎用",
+      "suitable_constitutions": "[\"湿热质\",\"痰湿质\"]",
+      "avoid_constitutions": "[\"阳虚质\"]",
+      "aliases": "[\"葫芦瓜\",\"菜瓜\"]",
+      "image_url": "/static/ingredients/八角瓜.jpg"
+    },
+    {
+      "name": "八爪鱼",
+      "category": "海鲜水产类",
+      "nature": "平",
+      "taste": "甘咸",
+      "efficacy": "补气养血收敛生肌",
+      "nutritional_value": "富含蛋白质牛磺酸",
+      "contraindications": "荨麻疹患者慎用",
+      "suitable_constitutions": "[\"血虚质\",\"气虚质\"]",
+      "avoid_constitutions": "[\"特禀质\"]",
+      "aliases": "[\"章鱼\",\"octopus\"]",
+      "image_url": "/static/ingredients/八爪鱼.jpg"
+    },
+    {
+      "name": "耙耙柑",
+      "category": "水果类",
+      "nature": "凉",
+      "taste": "甘酸",
+      "efficacy": "生津止渴润肺化痰",
+      "nutritional_value": "含维生素C类黄酮",
+      "contraindications": "糖尿病患者慎用",
+      "suitable_constitutions": "[\"阴虚质\",\"湿热质\"]",
+      "avoid_constitutions": "[\"阳虚质\"]",
+      "aliases": "[\"春见\",\"柑橘\"]",
+      "image_url": "/static/ingredients/耙耙柑.jpg"
+    }
+  ]
+}
