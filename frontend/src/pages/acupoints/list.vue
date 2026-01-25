@@ -1,39 +1,39 @@
 <template>
-  <view class="acupoints-list-page">
-    <!-- 顶部 Tabs -->
-    <view class="tabs-header">
-      <view 
-        class="tab-item" 
-        :class="{ active: currentTab === 'meridian' }"
+  <view class="acupoint-list">
+    <!-- 搜索框 -->
+    <view class="search-bar">
+      <view class="search-input-wrapper">
+        <text class="search-icon">🔍</text>
+        <input
+          v-model="keyword"
+          class="search-input"
+          placeholder="搜索穴位名称/拼音"
+          @confirm="handleSearch"
+        />
+        <text v-if="keyword" class="clear-icon" @click="clearSearch">✕</text>
+      </view>
+    </view>
+
+    <!-- Tab 切换 -->
+    <view class="tabs">
+      <view
+        :class="['tab', { active: activeTab === 'meridian' }]"
         @click="switchTab('meridian')"
-      >
-        经脉
-      </view>
-      <view 
-        class="tab-item" 
-        :class="{ active: currentTab === 'part' }"
+      >按经络</view>
+      <view
+        :class="['tab', { active: activeTab === 'part' }]"
         @click="switchTab('part')"
-      >
-        部位
-      </view>
-      <!-- 暂时隐藏首字母功能，待后续完善 -->
-      <!-- <view 
-        class="tab-item" 
-        :class="{ active: currentTab === 'pinyin' }"
-        @click="switchTab('pinyin')"
-      >
-        首字母
-      </view> -->
+      >按部位</view>
     </view>
 
     <!-- 主内容区：左右分栏 -->
     <view class="content-area">
-      <!-- 左侧侧边栏 -->
+      <!-- 左侧分类菜单 -->
       <scroll-view class="side-menu" scroll-y>
-        <view 
-          v-for="item in sideMenuItems" 
-          :key="item.value" 
-          class="menu-item" 
+        <view
+          v-for="item in sideMenuItems"
+          :key="item.value"
+          class="menu-item"
           :class="{ active: selectedSideMenu === item.value }"
           @click="selectMenu(item.value)"
         >
@@ -41,32 +41,21 @@
         </view>
       </scroll-view>
 
-      <!-- 右侧内容区 -->
+      <!-- 右侧穴位列表 -->
       <scroll-view class="main-list" scroll-y @scrolltolower="loadMore">
         <view class="section-header">
           <text class="section-title">{{ selectedMenuLabel }}</text>
         </view>
 
         <view class="acupoint-grid">
-          <view 
-            v-for="item in acupoints" 
-            :key="item.id" 
+          <view
+            v-for="point in acupoints"
+            :key="point.id"
             class="acupoint-card"
-            @click="goToDetail(item.id)"
+            @click="goDetail(point.id)"
           >
-            <view class="card-image-wrapper">
-              <!-- 占位图，实际项目中应替换为真实图片 -->
-              <image 
-                :src="item.image_url || '/static/acupoints/default.png'" 
-                mode="aspectFill" 
-                class="acupoint-image"
-              />
-              <view class="acupoint-code-badge" v-if="item.code">{{ item.code }}</view>
-            </view>
-            <view class="card-info">
-              <text class="acupoint-name">{{ item.name }}</text>
-              <text class="acupoint-brief" v-if="item.location">{{ item.location }}</text>
-            </view>
+            <text class="name">{{ point.name }}</text>
+            <text class="pinyin">{{ point.pinyin || point.code }}</text>
           </view>
         </view>
 
@@ -82,16 +71,18 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted } from 'vue'
+import { ref, computed } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import {
   getAcupointsList,
   getBodyParts,
-  getMeridians
+  getMeridians,
+  searchAcupoints
 } from '@/api/acupoints.js'
 
 // 状态
-const currentTab = ref('meridian') // 'meridian' | 'part'
+const activeTab = ref('meridian') // 'meridian' | 'part'
+const keyword = ref('')
 const sideMenuItems = ref([])
 const selectedSideMenu = ref('')
 const acupoints = ref([])
@@ -118,10 +109,11 @@ async function initData() {
 
 // 切换 Tab
 async function switchTab(tab) {
-  if (currentTab.value === tab) return
-  currentTab.value = tab
+  if (activeTab.value === tab) return
+  activeTab.value = tab
   selectedSideMenu.value = '' // 重置选中项
   acupoints.value = [] // 清空列表
+  keyword.value = '' // 清空搜索
   await loadSideMenuData()
 }
 
@@ -129,16 +121,16 @@ async function switchTab(tab) {
 async function loadSideMenuData() {
   try {
     let res
-    if (currentTab.value === 'part') {
+    if (activeTab.value === 'part') {
       res = await getBodyParts()
-    } else if (currentTab.value === 'meridian') {
+    } else if (activeTab.value === 'meridian') {
       res = await getMeridians()
     }
-    
+
     if (res.code === 0) {
       sideMenuItems.value = res.data
       // 默认选中第一个
-      if (sideMenuItems.value.length > 0) {
+      if (sideMenuItems.value.length > 0 && !keyword.value) {
         selectMenu(sideMenuItems.value[0].value)
       }
     }
@@ -158,27 +150,46 @@ function selectMenu(value) {
   loadAcupoints()
 }
 
+// 搜索处理
+function handleSearch() {
+  currentPage.value = 0
+  acupoints.value = []
+  hasMore.value = true
+  loadAcupoints()
+}
+
+// 清除搜索
+function clearSearch() {
+  keyword.value = ''
+  handleSearch()
+}
+
 // 加载穴位数据
 async function loadAcupoints() {
-  if (loading.value || !selectedSideMenu.value) return
-  
+  if (loading.value) return
+
   loading.value = true
   try {
     const params = {
       skip: currentPage.value * pageSize,
       limit: pageSize
     }
-    
-    // 根据当前 Tab 添加筛选参数
-    if (currentTab.value === 'part') {
-      params.body_part = selectedSideMenu.value
-    } else if (currentTab.value === 'meridian') {
-      params.meridian = selectedSideMenu.value
+
+    // 搜索关键词优先
+    if (keyword.value) {
+      params.search = keyword.value
+    } else if (selectedSideMenu.value) {
+      // 根据当前 Tab 添加筛选参数
+      if (activeTab.value === 'part') {
+        params.body_part = selectedSideMenu.value
+      } else if (activeTab.value === 'meridian') {
+        params.meridian = selectedSideMenu.value
+      }
     }
-    
+
     const res = await getAcupointsList(params)
     if (res.code === 0) {
-      const newItems = res.data.items
+      const newItems = res.data.items || res.data || []
       if (newItems.length < pageSize) {
         hasMore.value = false
       }
@@ -200,7 +211,7 @@ function loadMore() {
 }
 
 // 跳转详情
-function goToDetail(id) {
+function goDetail(id) {
   uni.navigateTo({
     url: `/pages/acupoints/detail?id=${id}`
   })
@@ -208,77 +219,107 @@ function goToDetail(id) {
 </script>
 
 <style lang="scss">
-.acupoints-list-page {
-  height: 100vh;
+.acupoint-list {
+  background: #f5f5f5;
+  min-height: 100vh;
   display: flex;
   flex-direction: column;
-  background-color: #f5f7fa;
 }
 
-/* 顶部 Tabs */
-.tabs-header {
-  display: flex;
-  background-color: #fff;
-  border-bottom: 1rpx solid #eee;
-  height: 88rpx;
-  flex-shrink: 0;
-  
-  .tab-item {
-    flex: 1;
+/* 搜索框 */
+.search-bar {
+  padding: 20rpx;
+  background: #fff;
+
+  .search-input-wrapper {
     display: flex;
     align-items: center;
-    justify-content: center;
-    font-size: 30rpx;
+    height: 70rpx;
+    background: #f5f5f5;
+    border-radius: 35rpx;
+    padding: 0 30rpx;
+
+    .search-icon {
+      font-size: 32rpx;
+      margin-right: 15rpx;
+    }
+
+    .search-input {
+      flex: 1;
+      height: 100%;
+      font-size: 28rpx;
+      color: #333;
+    }
+
+    .clear-icon {
+      font-size: 28rpx;
+      color: #999;
+      padding: 10rpx;
+    }
+  }
+}
+
+/* Tab 切换 */
+.tabs {
+  display: flex;
+  background: #fff;
+  border-bottom: 1rpx solid #eee;
+
+  .tab {
+    flex: 1;
+    text-align: center;
+    padding: 30rpx 0;
+    font-size: 32rpx;
     color: #666;
     position: relative;
-    
+
     &.active {
-      color: #2b9939; // 主题色
+      color: #1acc76;
       font-weight: bold;
-      
+
       &::after {
         content: '';
         position: absolute;
         bottom: 0;
         left: 50%;
         transform: translateX(-50%);
-        width: 40rpx;
+        width: 60rpx;
         height: 4rpx;
-        background-color: #2b9939;
+        background-color: #1acc76;
         border-radius: 2rpx;
       }
     }
   }
 }
 
-/* 内容区 */
+/* 内容区：左右分栏 */
 .content-area {
   flex: 1;
   display: flex;
   overflow: hidden;
 }
 
-/* 左侧菜单 */
+/* 左侧分类菜单 */
 .side-menu {
   width: 200rpx;
-  background-color: #f0f2f5;
+  background: #f0f2f5;
   height: 100%;
-  
+
   .menu-item {
     height: 100rpx;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 28rpx;
+    font-size: 26rpx;
     color: #666;
     border-bottom: 1rpx solid #e8e8e8;
     position: relative;
-    
+
     &.active {
-      background-color: #fff;
-      color: #2b9939;
+      background: #fff;
+      color: #1acc76;
       font-weight: 500;
-      
+
       &::before {
         content: '';
         position: absolute;
@@ -286,17 +327,17 @@ function goToDetail(id) {
         top: 30rpx;
         bottom: 30rpx;
         width: 6rpx;
-        background-color: #2b9939;
+        background-color: #1acc76;
         border-radius: 0 4rpx 4rpx 0;
       }
     }
   }
 }
 
-/* 右侧列表 */
+/* 右侧穴位列表 */
 .main-list {
   flex: 1;
-  background-color: #fff;
+  background: #fff;
   height: 100%;
   padding: 20rpx;
   box-sizing: border-box;
@@ -304,24 +345,24 @@ function goToDetail(id) {
 
 .section-header {
   padding: 10rpx 0 20rpx;
-  
+
   .section-title {
     font-size: 32rpx;
     font-weight: bold;
     color: #333;
     position: relative;
     padding-left: 20rpx;
-    
+
     &::before {
       content: '';
       position: absolute;
       left: 0;
       top: 50%;
       transform: translateY(-50%);
-      width: 8rpx;
+      width: 6rpx;
       height: 24rpx;
-      background-color: #2b9939;
-      border-radius: 4rpx;
+      background-color: #1acc76;
+      border-radius: 3rpx;
     }
   }
 }
@@ -334,68 +375,45 @@ function goToDetail(id) {
 }
 
 .acupoint-card {
-  background-color: #fff;
-  border-radius: 12rpx;
-  overflow: hidden;
-  box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.05);
+  background: #fff;
+  border-radius: 16rpx;
+  padding: 30rpx 20rpx;
+  text-align: center;
+  box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.08);
   border: 1rpx solid #f0f0f0;
-  
-  .card-image-wrapper {
-    width: 100%;
-    height: 200rpx;
-    position: relative;
-    background-color: #f8f8f8;
-    
-    .acupoint-image {
-      width: 100%;
-      height: 100%;
-    }
-    
-    .acupoint-code-badge {
-      position: absolute;
-      top: 10rpx;
-      right: 10rpx;
-      background-color: rgba(0, 0, 0, 0.5);
-      color: #fff;
-      font-size: 20rpx;
-      padding: 4rpx 10rpx;
-      border-radius: 20rpx;
-    }
+  transition: all 0.3s;
+
+  &:active {
+    transform: scale(0.98);
+    box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.1);
   }
-  
-  .card-info {
-    padding: 16rpx;
-    
-    .acupoint-name {
-      display: block;
-      font-size: 28rpx;
-      font-weight: bold;
-      color: #333;
-      margin-bottom: 8rpx;
-      text-align: center;
-    }
-    
-    .acupoint-brief {
-      display: block;
-      font-size: 22rpx;
-      color: #999;
-      text-align: center;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
+
+  .name {
+    display: block;
+    font-size: 36rpx;
+    font-weight: bold;
+    color: #333;
+    margin-bottom: 10rpx;
+  }
+
+  .pinyin {
+    display: block;
+    font-size: 24rpx;
+    color: #999;
   }
 }
 
+/* 加载状态 */
 .load-more {
   text-align: center;
   padding: 30rpx 0;
   color: #999;
   font-size: 24rpx;
-  
+
   .empty-text {
     padding-top: 100rpx;
     display: block;
+    color: #ccc;
   }
 }
 </style>

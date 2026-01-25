@@ -272,25 +272,35 @@ class Acupoint(Base):
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     name = Column(String(50), nullable=False)
     code = Column(String(20))  # 穴位代号，如 ST36
+    pinyin = Column(String(100))  # 拼音
+    aliases = Column(JSON, nullable=False, default=list)  # 别名数组，如 ["头冲", "颈冲"]
     meridian = Column(String(50))  # 所属经络，如 "足阳明胃经"
+    five_element = Column(String(20))  # 经络五行，如 "金", "木", "水", "火", "土"
 
     # 位置
     body_part = Column(String(50))  # 部位，如 "下肢"
     location = Column(Text)  # 定位，如 "犊鼻下3寸，胫骨前缘外一横指"
     simple_location = Column(Text)  # 简易取穴，如 "膝盖骨外侧下方凹陷往下四横指"
 
-    # 功效
-    efficacy = Column(JSON)  # 主要功效列表，如 ["健脾和胃", "扶正培元", "调理气血"]
-    indications = Column(JSON)  # 主治病症列表，如 ["胃痛", "消化不良", "失眠", "疲劳"]
+    # 释义与功效
+    explanation = Column(Text)  # 穴位释义
+    functions = Column(Text)  # 穴位功能描述
+    efficacy = Column(JSON, nullable=False, default=list)  # 主要功效列表，如 ["健脾和胃", "扶正培元", "调理气血"]
+    indications = Column(JSON, nullable=False, default=list)  # 主治病症列表，如 ["胃痛", "消化不良", "失眠", "疲劳"]
 
-    # 按摩
+    # 操作方法
     massage_method = Column(Text)  # 按摩手法
+    moxibustion_method = Column(Text)  # 灸法
     massage_duration = Column(String(50))  # 按摩时间，如 "3-5分钟"
     massage_frequency = Column(String(50))  # 按摩频率，如 "每日1-2次"
     precautions = Column(Text)  # 注意事项
 
+    # 解剖与配伍
+    anatomical_structure = Column(Text)  # 解剖位置和结构
+    combinations = Column(Text)  # 主要配伍
+
     # 体质关联（与现有系统对接）
-    suitable_constitutions = Column(JSON)  # 适用体质，如 ["qi_deficiency", "yang_deficiency"]
+    suitable_constitutions = Column(JSON, nullable=False, default=list)  # 适用体质，如 ["qi_deficiency", "yang_deficiency"]
     constitution_benefit = Column(Text)  # 体质调理说明，如 "健脾和胃，增强体质"
 
     # 展示
