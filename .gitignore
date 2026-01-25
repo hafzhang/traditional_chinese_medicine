@@ -10,9 +10,6 @@
 Thumbs.db
 bash.exe.stackdump
 
-# Claude
-.claude/
-
 # Python
 __pycache__/
 *.py[cod]

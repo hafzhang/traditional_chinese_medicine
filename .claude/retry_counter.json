@@ -1,0 +1,19 @@
+{
+  "version": "1.0.0",
+  "last_updated": "2025-01-13T00:00:00Z",
+  "max_retry_count": 3,
+  "same_task_threshold": 3,
+  "consecutive_failure_threshold": 3,
+  "tasks": {},
+  "statistics": {
+    "total_tracked_tasks": 0,
+    "total_retries": 0,
+    "max_retries_single_task": 0,
+    "tasks_with_retries": 0
+  },
+  "alerts": {
+    "high_retry_triggered": false,
+    "consecutive_failure_triggered": false,
+    "last_alert_time": null
+  }
+}

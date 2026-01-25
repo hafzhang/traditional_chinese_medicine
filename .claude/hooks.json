@@ -1,0 +1,221 @@
+{
+  "description": "Claude Code hooks for Constitution Recognition MVP project",
+  "version": "2.0.0",
+  "autonomous_mode": {
+    "enabled": true,
+    "max_continuous_hours": 8,
+    "auto_break_minutes": 15,
+    "daily_goal_check": true
+  },
+  "hooks": {
+    "pre-command": [
+      {
+        "name": "token_guard",
+        "description": "Check token usage and prevent cost overrun",
+        "command": "bash scripts/hooks/token_guard.sh",
+        "enabled": true,
+        "blocking": true,
+        "critical": true
+      },
+      {
+        "name": "house_keeping",
+        "description": "Clean up logs and manage disk space",
+        "command": "bash scripts/hooks/house_keeping.sh",
+        "enabled": true,
+        "run_every": "hourly"
+      },
+      {
+        "name": "check_environment",
+        "description": "Verify required environment variables and dependencies before running commands",
+        "command": "bash scripts/hooks/check_env.sh",
+        "enabled": true,
+        "run_in_background": false
+      }
+    ],
+    "user-prompt-submit": [
+      {
+        "name": "check_priority",
+        "description": "Check task priority and prevent deviating from main MVP path",
+        "command": "bash scripts/hooks/check_priority.sh",
+        "enabled": true,
+        "blocking": true
+      },
+      {
+        "name": "load_small_template",
+        "description": "Detect large tasks and suggest/automatically split into smaller subtasks",
+        "command": "bash scripts/hooks/load_small_template.sh",
+        "enabled": true,
+        "blocking": false
+      },
+      {
+        "name": "log_user_request",
+        "description": "Log all user requests for tracking and analysis",
+        "command": "bash scripts/hooks/log_request.sh",
+        "enabled": true,
+        "include_context": true
+      },
+      {
+        "name": "detect_feature_request",
+        "description": "Detect and categorize feature requests from user prompts",
+        "command": "bash scripts/hooks/detect_feature.sh",
+        "enabled": true
+      },
+      {
+        "name": "check_mvp_scope",
+        "description": "Warn if requested feature is outside MVP scope",
+        "command": "bash scripts/hooks/check_mvp_scope.sh",
+        "enabled": true
+      }
+    ],
+    "tool-use": [
+      {
+        "name": "validate_python_code",
+        "description": "Validate Python code syntax before Write operation",
+        "command": "bash scripts/hooks/validate_python.sh",
+        "enabled": true,
+        "trigger": {
+          "tool_name": "Write",
+          "file_pattern": "*.py"
+        }
+      },
+      {
+        "name": "validate_sql_schema",
+        "description": "Validate SQL schema changes",
+        "command": "bash scripts/hooks/validate_sql.sh",
+        "enabled": true,
+        "trigger": {
+          "tool_name": "Write",
+          "file_pattern": "*migration*.sql"
+        }
+      },
+      {
+        "name": "auto_fix_sql",
+        "description": "Automatically fix SQL schema issues when validation fails",
+        "command": "bash scripts/hooks/auto_fix_sql.sh",
+        "enabled": true,
+        "trigger": {
+          "tool_name": "Write",
+          "file_pattern": "*.sql",
+          "on_failure": "validate_sql_schema"
+        }
+      },
+      {
+        "name": "track_file_changes",
+        "description": "Track all file write operations",
+        "command": "bash scripts/hooks/track_changes.sh",
+        "enabled": true,
+        "trigger": {
+          "tool_name": ["Write", "Edit"]
+        }
+      },
+      {
+        "name": "check_api_endpoint",
+        "description": "Validate API endpoint naming conventions",
+        "command": "bash scripts/hooks/check_api_naming.sh",
+        "enabled": true,
+        "trigger": {
+          "tool_name": "Write",
+          "file_pattern": "*/api/*"
+        }
+      },
+      {
+        "name": "run_relevant_tests",
+        "description": "Run relevant test suite after file save, auto-fix on failure",
+        "command": "bash scripts/hooks/run_relevant_tests.sh",
+        "enabled": true,
+        "trigger": {
+          "tool_name": ["Write", "Edit"],
+          "run_after": true
+        }
+      }
+    ],
+    "pre-response": [
+      {
+        "name": "check_response_length",
+        "description": "Warn if response is too long for optimal user experience",
+        "command": "bash scripts/hooks/check_response.sh",
+        "enabled": true
+      },
+      {
+        "name": "verify_task_completion",
+        "description": "Verify all MVP checklist items are addressed",
+        "command": "bash scripts/hooks/verify_completion.sh",
+        "enabled": true
+      }
+    ],
+    "post-response": [
+      {
+        "name": "auto_plan_next",
+        "description": "Automatically plan and display the next task from todo.md",
+        "command": "bash scripts/hooks/auto_plan_next.sh",
+        "enabled": true,
+        "output_to_user": true
+      },
+      {
+        "name": "log_session_summary",
+        "description": "Log session summary and token usage",
+        "command": "bash scripts/hooks/log_session.sh",
+        "enabled": true
+      },
+      {
+        "name": "update_progress",
+        "description": "Update MVP development progress tracker",
+        "command": "bash scripts/hooks/update_progress.sh",
+        "enabled": true
+      }
+    ],
+    "error": [
+      {
+        "name": "log_error",
+        "description": "Log all errors with context for debugging",
+        "command": "bash scripts/hooks/log_error.sh",
+        "enabled": true
+      },
+      {
+        "name": "suggest_fix",
+        "description": "Suggest fixes based on error patterns",
+        "command": "bash scripts/hooks/suggest_fix.sh",
+        "enabled": true
+      },
+      {
+        "name": "auto_fix_on_error",
+        "description": "Automatically attempt to fix errors based on file type",
+        "command": "bash scripts/hooks/auto_fix_on_error.sh",
+        "enabled": true,
+        "trigger": {
+          "error_types": ["SyntaxError", "ValidationError", "TypeError"]
+        }
+      }
+    ]
+  },
+  "environment": {
+    "project_name": "constitution-recognition-mvp",
+    "mvp_deadline_days": 21,
+    "python_version": "3.11+",
+    "required_files": [
+      "requirements.txt",
+      "pyproject.toml",
+      ".env.example"
+    ]
+  },
+  "mvp_scope": {
+    "included_features": [
+      "constitution_test_questionnaire",
+      "judgment_service",
+      "basic_report_generation",
+      "diet_recommendation",
+      "result_visualization",
+      "share_card"
+    ],
+    "excluded_features": [
+      "social_long_chain",
+      "points_mall",
+      "ai_tongue_diagnosis",
+      "enterprise_service",
+      "seasonal_health",
+      "exercise_recommendation",
+      "health_tracking",
+      "complex_recommendation_engine"
+    ]
+  }
+}
