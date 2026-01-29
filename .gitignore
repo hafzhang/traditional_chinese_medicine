@@ -56,3 +56,13 @@ logs/
 # Temporary
 *.tmp
 *.temp
+nul
+
+# Large data files
+source_data/dishes_images/
+tasks/
+
+# Claude Skills internal
+.claude/skills/prd/
+.claude/skills/ralph/
+scripts/ralph/
