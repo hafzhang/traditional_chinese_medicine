@@ -242,3 +242,39 @@ Started: Thu, Jan 30, 2026 10:30:00 AM
   - RecipeIngredient objects are not added to db.session here - they will be added by the calling function
 
 ---
+
+## [2026-01-30] - US-020
+- Implemented import_single_recipe function in backend/scripts/import_recipes.py
+- Added RecipeStep model import for creating step records
+- Function processes a single Excel row and converts it to a Recipe database record
+- Implements all 8 steps from PRD:
+  1. check_recipe_exists() - skip if already exists
+  2. Parse fields (cooking_time, difficulty, tags)
+  3. Smart inference (constitutions, efficacy, solar_terms)
+  4. Parse ingredients and steps
+  5. validate_and_link_ingredients() - validate ingredients
+  6. match_recipe_image() - match images
+  7. Create Recipe object with all fields
+  8. Add to db.session (when dry_run=False)
+- Created 9 unit tests in tests/test_unit/test_import_recipes.py:
+  - test_import_single_recipe_success - successful import with ingredients and steps
+  - test_import_single_recipe_skip_existing - skip if recipe already exists
+  - test_import_single_recipe_skip_empty_title - skip if title is empty
+  - test_import_single_recipe_dry_run - dry-run mode doesn't write to database
+  - test_import_single_recipe_parse_difficulty_from_time - infer difficulty from cooking time
+  - test_import_single_recipe_guess_tags - smart tag guessing for constitutions and efficacy
+  - test_import_single_recipe_with_image_match - image matching works correctly
+  - test_import_single_recipe_parse_steps - step parsing with duration extraction
+  - test_import_single_recipe_skip_missing_ingredients - skip ingredients not in database
+- All 135 tests pass (109 Phase 1 + 26 import_recipes tests)
+- Typecheck passes
+- Files changed: backend/scripts/import_recipes.py, backend/tests/test_unit/test_import_recipes.py, prd.json, progress.txt
+- **Learnings for future iterations:**
+  - The dry_run mode should still populate relationships for testing purposes
+  - SQLAlchemy relationship order is not guaranteed without order_by - use queries with order_by or find by property instead of index
+  - When testing relationships that use is_main flag, use next() with generator expression instead of assuming index order
+  - The Recipe object is created with all relationships populated before commit, allowing validation before database write
+  - Error handling wraps the entire import process with rollback on failure
+  - UUID is generated for each new recipe and its related records (ingredients and steps)
+
+---
