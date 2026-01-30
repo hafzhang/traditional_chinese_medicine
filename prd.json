@@ -545,8 +545,8 @@
         "Tests pass"
       ],
       "priority": 29,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "GET /api/recipes endpoint implemented with all query parameters and filters"
     },
     {
       "id": "US-030",
@@ -564,8 +564,8 @@
         "Tests pass"
       ],
       "priority": 30,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "GET /api/recipes/{id} endpoint implemented with full data including desc, tip, ingredients, steps"
     },
     {
       "id": "US-031",
@@ -583,8 +583,8 @@
         "Tests pass"
       ],
       "priority": 31,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Both search and recommend endpoints implemented with validation and error handling"
     },
     {
       "id": "US-032",
@@ -599,8 +599,8 @@
         "Tests pass"
       ],
       "priority": 32,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Router already registered in main.py with prefix='/api/v1', tags=['Recipes']"
     },
     {
       "id": "US-033",
@@ -617,8 +617,8 @@
         "Tests pass"
       ],
       "priority": 33,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "10 API tests written and passing. Tests updated to use new API structure (search, recommend endpoints)"
     },
     {
       "id": "US-034",

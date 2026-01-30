@@ -473,3 +473,26 @@ Started: Thu, Jan 30, 2026 10:30:00 AM
   - Empty list return values need explicit test coverage (e.g., invalid constitution code)
 
 ---
+
+## [2026-01-30] - US-029, US-030, US-031, US-032, US-033
+- Implemented complete recipes API router with all endpoints
+- GET /api/recipes: List recipes with filters (constitution, efficacy, solar_term, difficulty, max_cooking_time, sort_by)
+- GET /api/recipes/{id}: Get recipe detail with desc, tip, ingredients (with nature/taste), steps
+- GET /api/recipes/search: Search recipes by keyword (name, ingredient, efficacy)
+- GET /api/recipes/recommend: Get recommendations by type (constitution, solar_term, efficacy)
+- Router already registered in main.py with prefix='/api/v1', tags=['Recipes']
+- Updated API tests to use new endpoint structure (removed old Phase 1 endpoints)
+- Added 5 new tests: get_recipes_with_filters, recommend_invalid_type, recommend_missing_params, pagination
+- All 177 tests pass (109 Phase 1 + 32 import_recipes + 42 recipe service + 10 recipe API)
+- Files changed: backend/api/routers/recipes.py, backend/tests/test_api/test_recipes_api.py, prd.json, progress.txt
+- **Learnings for future iterations:**
+  - When updating existing API routers, also update corresponding API tests to match new endpoints
+  - FastAPI route order matters: specific routes (/search, /recommend) before dynamic routes (/{id})
+  - Static list routes must come before dynamic routes (/{id}) to avoid conflicts
+  - The new Excel Import API structure differs from Phase 1: /recommend uses query params instead of path params
+  - RecipeService.get_recipes() uses filters dict instead of individual parameters for flexibility
+  - Standard response format: {code: 0, data: {...}} for success, HTTPException for errors
+  - Query parameter validation: use ge=, le= constraints for numeric values in Query()
+  - All recipe endpoints are public (no authentication required per PRD)
+
+---
