@@ -61,6 +61,12 @@
       }
     },
     {
+      "path": "pages/recipes/search",
+      "style": {
+        "navigationBarTitleText": "搜索菜谱"
+      }
+    },
+    {
       "path": "pages/acupoints/list",
       "style": {
         "navigationBarTitleText": "穴位查找"

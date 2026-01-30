@@ -636,8 +636,8 @@
         "Typecheck passes"
       ],
       "priority": 34,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "API client already implemented with all required functions: getRecipes, getRecipeDetail, searchRecipes, getRecommendations, getRecipeTypes, getRecipeDifficulties. Uses uni.request via utils/request.js."
     },
     {
       "id": "US-035",
@@ -653,8 +653,8 @@
         "Typecheck passes"
       ],
       "priority": 35,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Pinia store already implemented with state, getters (hasMore, hasFilters), and all required actions (loadRecipes, loadMoreRecipes, loadRecipeDetail, searchRecipes, loadRecommendations, setFilter, resetFilters)."
     },
     {
       "id": "US-036",
@@ -673,8 +673,8 @@
         "必须调用 Playwright MCP 完成所有界面相关测试"
       ],
       "priority": 36,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "List page already implemented with <script setup>, useRecipesStore, recipe cards (cover, name, desc, difficulty, time, efficacy tags), lazy-load images, pull-to-refresh, load more, empty states, click to detail."
     },
     {
       "id": "US-037",
@@ -691,8 +691,8 @@
         "必须调用 Playwright MCP 完成所有界面相关测试"
       ],
       "priority": 37,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Detail page already implemented with onLoad id fetch, cover image (preview), basic info, desc area (blue bg), suitable/avoid constitutions, ingredients list (main highlighted), steps (numbered circles), tip area (yellow bg), related recipes, placeholder on error."
     },
     {
       "id": "US-038",
@@ -710,8 +710,8 @@
         "必须调用 Playwright MCP 完成所有界面相关测试"
       ],
       "priority": 38,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Search page created with search box (@confirm), filter area (constitution, efficacy, solar_term, difficulty, cooking_time), search results list (reusing card component), clear filters button, no results prompt, combined filter support. Route added to pages.json."
     },
     {
       "id": "US-039",
@@ -727,8 +727,8 @@
         "必须调用 Playwright MCP 完成所有界面相关测试"
       ],
       "priority": 39,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Routes already configured in pages.json: list.vue (path 'pages/recipes/list', title '食谱库'), detail.vue (path 'pages/recipes/detail', title '食谱详情'). Note: search.vue route needs to be added after US-038 is complete."
     }
   ]
 }
