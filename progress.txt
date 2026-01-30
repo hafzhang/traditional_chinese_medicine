@@ -211,3 +211,34 @@ Started: Thu, Jan 30, 2026 10:30:00 AM
   - When adding tests to existing test file, be careful with Edit tool to not replace existing classes
 
 ---
+
+## [2026-01-30] - US-019
+- Implemented validate_and_link_ingredients function in backend/scripts/import_recipes.py
+- Added imports: Ingredient, RecipeIngredient models from api.models
+- Function validates parsed ingredients against the ingredients table
+- Queries ingredients by name using filter_by(name=ingredient_name).first()
+- Supports synonym matching using FOOD_SYNONYMS from recipe_import_config
+- Skips missing ingredients with warning logs
+- Creates RecipeIngredient objects with proper settings:
+  - First ingredient marked as main (is_main=True)
+  - display_order set to index position
+  - amount field populated from parsed data
+- Returns list of RecipeIngredient objects for valid ingredients
+- Created 6 unit tests in tests/test_unit/test_import_recipes.py:
+  - test_validate_and_link_ingredients_success
+  - test_validate_and_link_ingredients_skip_missing
+  - test_validate_and_link_ingredients_synonym_matching
+  - test_validate_and_link_ingredients_empty_list
+  - test_validate_and_link_ingredients_skip_empty_name
+  - test_validate_and_link_ingredients_default_amount
+- All 126 tests pass (109 Phase 1 + 17 import_recipes tests)
+- Typecheck passes
+- Files changed: backend/scripts/import_recipes.py, backend/tests/test_unit/test_import_recipes.py, prd.json
+- **Learnings for future iterations:**
+  - When importing from sibling scripts, use full module path: from scripts.recipe_import_config import FOOD_SYNONYMS
+  - Synonym matching is important for ingredient data - Excel may use regional names while DB uses standard names
+  - The function handles edge cases gracefully: empty names, missing keys, None values
+  - First ingredient as "main" ingredient is a common pattern in recipe data
+  - RecipeIngredient objects are not added to db.session here - they will be added by the calling function
+
+---
