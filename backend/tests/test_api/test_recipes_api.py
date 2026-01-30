@@ -191,3 +191,147 @@ class TestRecipesAPI:
         assert response.status_code == 200
         data = response.json()
         assert data["data"]["page"] == 2
+
+    def test_get_recipes_with_efficacy_filter(self, client, db_session):
+        """测试功效标签筛选"""
+        from api.models import Recipe
+        recipes = [
+            Recipe(
+                id=f"efficacy-api-{i:03d}",
+                name=f"食谱{i}",
+                type="粥类",
+                efficacy_tags=["健脾"] if i % 2 == 0 else ["养胃"]
+            )
+            for i in range(1, 6)
+        ]
+        db_session.add_all(recipes)
+        db_session.commit()
+
+        response = client.get("/api/v1/recipes?efficacy=健脾")
+        assert response.status_code == 200
+        data = response.json()
+        assert data["code"] == 0
+        assert data["data"]["total"] == 2  # 2, 4
+
+    def test_get_recipes_with_solar_term_filter(self, client, db_session):
+        """测试节气筛选"""
+        from api.models import Recipe
+        recipes = [
+            Recipe(
+                id=f"solar-api-{i:03d}",
+                name=f"食谱{i}",
+                type="粥类",
+                solar_terms=["春季"] if i % 2 == 0 else ["夏季"]
+            )
+            for i in range(1, 6)
+        ]
+        db_session.add_all(recipes)
+        db_session.commit()
+
+        response = client.get("/api/v1/recipes?solar_term=春季")
+        assert response.status_code == 200
+        data = response.json()
+        assert data["code"] == 0
+        assert data["data"]["total"] == 2  # 2, 4
+
+    def test_get_recipes_with_max_cooking_time_filter(self, client, db_session):
+        """测试最大烹饪时间筛选"""
+        from api.models import Recipe
+        recipes = [
+            Recipe(
+                id=f"time-api-{i:03d}",
+                name=f"食谱{i}",
+                type="粥类",
+                cooking_time=20 + i * 10  # 30, 40, 50, 60, 70
+            )
+            for i in range(1, 6)
+        ]
+        db_session.add_all(recipes)
+        db_session.commit()
+
+        response = client.get("/api/v1/recipes?max_cooking_time=45")
+        assert response.status_code == 200
+        data = response.json()
+        assert data["code"] == 0
+        assert data["data"]["total"] == 2  # 30, 40 are <= 45
+
+    def test_recommend_solar_term_missing_param(self, client, db_session):
+        """测试节气推荐缺少必需参数"""
+        response = client.get("/api/v1/recipes/recommend?recommend_type=solar_term")
+
+        assert response.status_code == 400
+        data = response.json()
+        assert "solar_term" in data["detail"].lower()
+
+    def test_recommend_efficacy_missing_param(self, client, db_session):
+        """测试功效推荐缺少必需参数"""
+        response = client.get("/api/v1/recipes/recommend?recommend_type=efficacy")
+
+        assert response.status_code == 400
+        data = response.json()
+        assert "efficacy" in data["detail"].lower()
+
+    def test_get_recipe_types_list(self, client, db_session):
+        """测试获取菜谱类型列表"""
+        response = client.get("/api/v1/recipes/types/list")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["code"] == 0
+        types = data["data"]
+        assert len(types) == 6
+        type_values = [t["value"] for t in types]
+        assert "粥类" in type_values
+        assert "汤类" in type_values
+
+    def test_get_recipe_difficulties_list(self, client, db_session):
+        """测试获取菜谱难度列表"""
+        response = client.get("/api/v1/recipes/difficulties/list")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["code"] == 0
+        difficulties = data["data"]
+        assert len(difficulties) == 3
+        diff_values = [d["value"] for d in difficulties]
+        assert "简单" in diff_values
+        assert "中等" in diff_values
+        assert "困难" in diff_values
+
+    def test_recommend_solar_term_success(self, client, db_session):
+        """测试节气推荐成功"""
+        from api.models import Recipe
+        recipe = Recipe(
+            id="solar-rec-001",
+            name="春季养生汤",
+            type="汤类",
+            solar_terms=["春季"]
+        )
+        db_session.add(recipe)
+        db_session.commit()
+
+        response = client.get("/api/v1/recipes/recommend?recommend_type=solar_term&solar_term=春季")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["code"] == 0
+        assert "items" in data["data"]
+
+    def test_recommend_efficacy_success(self, client, db_session):
+        """测试功效推荐成功"""
+        from api.models import Recipe
+        recipe = Recipe(
+            id="efficacy-rec-001",
+            name="健脾粥",
+            type="粥类",
+            efficacy_tags=["健脾"]
+        )
+        db_session.add(recipe)
+        db_session.commit()
+
+        response = client.get("/api/v1/recipes/recommend?recommend_type=efficacy&efficacy=健脾")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["code"] == 0
+        assert "items" in data["data"]
