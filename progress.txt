@@ -566,3 +566,26 @@ Started: Thu, Jan 30, 2026 10:30:00 AM
   - Difficulty values are now English codes (easy/medium/hard) not Chinese
 
 ---
+
+## [2026-01-30] - US-028
+- Verified all RecipeService unit tests are complete and passing
+- Test file: backend/tests/test_unit/test_recipes.py
+- 42 tests covering all acceptance criteria:
+  - get_recipe_by_id: success, failure, with ingredients (nature/taste), with steps, with desc/tip
+  - get_recipes: no filters, pagination, various filters (constitution, efficacy, solar_term, difficulty, max_cooking_time), sorting (view_count_desc, cooking_time_asc)
+  - search_recipes: by name, by ingredient, by efficacy, pagination, empty keyword
+  - get_recommendations: three types (constitution, solar_term, efficacy), invalid type, missing params, invalid constitution, limit
+- All 42 tests pass
+- Coverage: 100% (exceeds 90% requirement)
+- All 177 total tests pass (109 Phase 1 + 32 import_recipes + 42 recipes)
+- Files changed: prd.json
+- **Learnings for future iterations:**
+  - The test file was already comprehensive from previous iterations
+  - Coverage measurement helps identify untested edge cases
+  - When checking test completeness, run pytest with --cov to see missing lines
+  - Empty list return values need explicit test coverage (e.g., invalid constitution code)
+  - get_recipe_service() singleton function should be tested to verify it returns the same instance
+  - Recipe model uses joinedload for eager loading relationships to avoid N+1 queries
+  - Tests use db_session fixture which auto-rolls back transactions after each test
+
+---
