@@ -450,3 +450,26 @@ Started: Thu, Jan 30, 2026 10:30:00 AM
   - For maximum compatibility, search multiple patterns: unicode_escaped, quoted, and plain text
 
 ---
+
+## [2026-01-30] - US-028
+- Wrote comprehensive unit tests for RecipeService
+- Added 14 new tests to achieve 100% coverage (160 statements, 0 missed)
+- Fixed JSON column filtering in get_recipes method for efficacy_tags and solar_terms
+- Changed from .contains() to LIKE queries for SQLite JSON column compatibility
+- Tests cover all acceptance criteria:
+  - get_recipe_by_id成功/失败/含食材(性味)/含步骤/含desc_tip
+  - get_recipes无筛选/分页/各种筛选条件/排序
+  - search_recipes按名/食材/功效/分页/空关键字
+  - get_recommendations三种类型/无效类型/缺少参数/limit
+- All 42 recipe service tests pass, all 173 total tests pass
+- Coverage: 100% (exceeds 90% requirement)
+- Files changed: backend/api/services/recipe_service.py, backend/tests/test_unit/test_recipes.py
+- **Learnings for future iterations:**
+  - JSON columns in SQLite with Chinese characters require LIKE queries with unicode escape patterns
+  - Using json.dumps(text).strip('"') creates the unicode-escaped pattern for LIKE queries
+  - Test coverage measurement helps identify untested edge cases like invalid constitution codes
+  - When adding tests for existing methods, check for methods that use JSON column filtering
+  - The get_recipe_service() singleton function should be tested to verify it returns the same instance
+  - Empty list return values need explicit test coverage (e.g., invalid constitution code)
+
+---
