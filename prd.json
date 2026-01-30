@@ -34,8 +34,8 @@
         "Typecheck passes"
       ],
       "priority": 2,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Model created with UniqueConstraint and relationships enabled in Recipe model"
     },
     {
       "id": "US-003",
