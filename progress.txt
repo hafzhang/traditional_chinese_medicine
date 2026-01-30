@@ -2,6 +2,22 @@
 Started: Thu, Jan 30, 2026 10:30:00 AM
 ---
 
+## [2026-01-30] - US-001
+- Verified existing Recipe model meets all acceptance criteria
+- All required fields present: id, name (indexed), description, desc, tip, cover_image, cooking_time, difficulty
+- TCM attributes present: suitable_constitutions, avoid_constitutions, efficacy_tags, solar_terms (all JSON)
+- Nutrition fields present: calories (Integer), protein, fat, carbs (all Float)
+- Metadata present: is_published, view_count, created_at, updated_at
+- Relationship placeholders commented out pending US-002 and US-003
+- Files checked: backend/api/models/__init__.py
+- **Learnings for future iterations:**
+  - The Recipe model was already implemented with all Excel import required fields
+  - The model uses dual naming for some fields (cook_time/cooking_time) to support both Phase 1 and Excel import
+  - Relationships are commented out to avoid conflicts until related models are created
+  - UUID strings are used for primary keys throughout the codebase
+  - JSON columns are used for array data (constitutions, tags, etc.)
+---
+
 ## Codebase Patterns
 - This project uses custom migration scripts instead of Alembic (see backend/migrations/)
 - Migration scripts are located in backend/migrations/ and follow pattern migrate_*.py

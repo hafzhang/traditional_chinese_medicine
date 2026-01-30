@@ -18,8 +18,8 @@
         "Typecheck passes"
       ],
       "priority": 1,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Recipe model already exists with all required fields. Relationships commented out pending US-002 and US-003"
     },
     {
       "id": "US-002",

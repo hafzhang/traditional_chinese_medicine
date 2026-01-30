@@ -3,7 +3,7 @@ Database Models
 数据库模型定义 - SQLite 兼容版本
 """
 
-from sqlalchemy import Column, String, Integer, Float, Boolean, DateTime, ForeignKey, Text, JSON
+from sqlalchemy import Column, String, Integer, Float, Boolean, DateTime, ForeignKey, Text, JSON, UniqueConstraint
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from sqlalchemy.dialects.postgresql import UUID
@@ -182,20 +182,31 @@ class Food(Base):
 
 
 class Recipe(Base):
-    """食谱库表 - Phase 1 更新版 + 营养分析版"""
+    """食谱库表 - Phase 1 更新版 + 营养分析版 + Excel导入增强版"""
     __tablename__ = "recipes"
 
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
-    name = Column(String(100), nullable=False)
+    name = Column(String(200), nullable=False, index=True)
     type = Column(String(50))  # 类型：粥类、汤类、茶饮、菜肴、主食、甜品小吃
-    difficulty = Column(String(20))  # 难度：简单、中等、困难
+    difficulty = Column(String(20))  # 难度：简单、中等、困难 -> easy/medium/hard
     cook_time = Column(Integer)  # 烹饪时间（分钟）
+    cooking_time = Column(Integer)  # 烹饪时间（分钟）- Excel导入字段（分钟）
     servings = Column(Integer)  # 份量
+
+    # 描述字段
+    description = Column(Text)  # 基本描述
+    desc = Column(Text)  # 个人体验描述 - Excel导入字段
+    tip = Column(Text)  # 烹饪贴士 - Excel导入字段
 
     # 体质关联（与现有系统对接）
     suitable_constitutions = Column(JSON)  # 适用体质，如 ["qi_deficiency"]
+    avoid_constitutions = Column(JSON)  # 禁忌体质 - Excel导入字段
     symptoms = Column(JSON)  # 主治症状，如 ["食欲不振", "疲劳乏力"]
     suitable_seasons = Column(JSON)  # 适用季节，如 ["春", "秋", "冬"]
+
+    # 功效和节气标签 - Excel导入字段
+    efficacy_tags = Column(JSON)  # 功效标签，如 ["健脾", "养胃", "补气"]
+    solar_terms = Column(JSON)  # 节气标签，如 ["立春", "雨水"]
 
     # 食材和步骤
     ingredients = Column(JSON)  # {main: [...], auxiliary: [...], seasoning: [...]}
@@ -207,10 +218,11 @@ class Recipe(Base):
     precautions = Column(Text)  # 注意事项
 
     # 营养分析 (每份)
-    calories = Column(Float, default=0)  # 热量 (kcal/份)
+    calories = Column(Integer, default=0)  # 热量 (kcal/份) - Excel导入要求Integer
     protein = Column(Float, default=0)  # 蛋白质 (g/份)
     fat = Column(Float, default=0)  # 脂肪 (g/份)
-    carbohydrates = Column(Float, default=0)  # 碳水化合物 (g/份)
+    carbohydrates = Column(Float, default=0)  # 碳水化合物 (g/份) -> 映射到carbs
+    carbs = Column(Float, default=0)  # 碳水化合物 (g/份) - Excel导入字段
     dietary_fiber = Column(Float, default=0)  # 膳食纤维 (g/份)
 
     # 营养素含量详情
@@ -233,7 +245,7 @@ class Recipe(Base):
 
     # 展示
     image_url = Column(String(255))
-    description = Column(Text)
+    cover_image = Column(String(500))  # 封面图 - Excel导入字段
     source = Column(String(100))  # 来源，如 "《本草纲目》"
 
     # 统计
@@ -242,9 +254,16 @@ class Recipe(Base):
     rating = Column(Float, default=0)  # 评分
     review_count = Column(Integer, default=0)  # 评论数
 
+    # 发布状态 - Excel导入字段
+    is_published = Column(Boolean, default=True)
+
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, onupdate=func.now())
     is_deleted = Column(Boolean, default=False)
+
+    # Relationships (ingredient_relations added in US-002, step_relations pending US-003)
+    ingredient_relations = relationship("RecipeIngredient", back_populates="recipe")
+    # step_relations = relationship("RecipeStep", back_populates="recipe")
 
 
 class ConstitutionInfo(Base):
@@ -390,3 +409,26 @@ class Course(Base):
 
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, onupdate=func.now())
+
+
+class RecipeIngredient(Base):
+    """菜谱-食材关联表 - Excel导入新增"""
+    __tablename__ = "recipe_ingredients"
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    recipe_id = Column(String(36), ForeignKey("recipes.id"), nullable=False)
+    ingredient_id = Column(String(36), ForeignKey("ingredients.id"), nullable=False)
+    amount = Column(String(50))  # 用量，如 "100g"
+    is_main = Column(Boolean, default=False)  # 是否主料
+    display_order = Column(Integer, default=0)  # 显示顺序
+
+    created_at = Column(DateTime, server_default=func.now())
+
+    # Unique constraint: each ingredient can only appear once per recipe
+    __table_args__ = (
+        UniqueConstraint('recipe_id', 'ingredient_id', name='uq_recipe_ingredient'),
+    )
+
+    # Relationships
+    recipe = relationship("Recipe", back_populates="ingredient_relations")
+    ingredient = relationship("Ingredient")
