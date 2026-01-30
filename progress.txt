@@ -597,3 +597,30 @@ Started: Thu, Jan 30, 2026 10:30:00 AM
   - Error handling in navigateTo shows toast for pages under development
 
 ---
+
+## [2026-01-30] - US-041
+- Created .claude/mcp_config.json with playwright MCP server configuration
+- Created frontend/playwright.config.ts with:
+  - baseURL: 'http://localhost:5173'
+  - webServer auto-start configuration (npm run dev:h5)
+  - Three projects: chromium, Mobile Chrome (Pixel 5), Mobile Safari (iPhone 12)
+  - Reporters: list, html, json
+  - Screenshot and video on failure
+  - 120s timeout for webServer startup
+- Created test directory: frontend/tests/e2e/recipes/
+- Created example.spec.ts as placeholder test
+- Installed @playwright/test@^1.58.0 as dev dependency
+- Installed chromium browser driver (v1208, Chrome 145.0.7632.6)
+- Added npm scripts: test:e2e, test:e2e:ui, test:e2e:headed, test:e2e:debug, test:e2e:report
+- Verified configuration: npx playwright test --list shows 3 tests
+- Files changed: .claude/mcp_config.json, frontend/playwright.config.ts, frontend/tests/e2e/example.spec.ts, frontend/package.json, prd.json, progress.txt
+- **Learnings for future iterations:**
+  - Playwright config supports multiple browser projects for testing different viewports
+  - webServer configuration can auto-start the dev server before tests
+  - reuseExistingServer: !process.env.CI allows local dev with existing server
+  - uni-app H5 dev server runs on port 5173 by default
+  - Playwright downloads browser drivers to %LOCALAPPDATA%\ms-playwright on Windows
+  - The test listing shows tests multiplied by number of configured projects
+  - Example test should be removed once real E2E tests are implemented
+
+---
