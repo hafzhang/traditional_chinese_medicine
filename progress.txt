@@ -526,3 +526,52 @@ Started: Thu, Jan 30, 2026 10:30:00 AM
   - increment_view_count is called on recipe detail GET requests
 
 ---
+
+## [2026-01-30] - US-034, US-035, US-036, US-037, US-038, US-039
+- Verified US-034: Frontend recipes API client already implemented (frontend/src/api/recipes.js)
+  - Exports: getRecipes, getRecipeDetail, searchRecipes, getRecommendations, getRecipeTypes, getRecipeDifficulties
+  - Uses uni.request via utils/request.js
+  - Handles standard response format with error throwing
+- Verified US-035: Frontend recipes Pinia store already implemented (frontend/src/stores/recipes.js)
+  - State: recipes, currentRecipe, filters, pagination, loading, error
+  - Getters: hasMore, hasFilters
+  - Actions: loadRecipes, loadMoreRecipes, loadRecipeDetail, searchRecipes, loadRecommendations, setFilter, resetFilters
+- Verified US-036: Recipes list page already implemented (frontend/src/pages/recipes/list.vue)
+  - <script setup> with useRecipesStore
+  - Recipe cards: cover image (lazy-load), name, desc, difficulty, time, efficacy tags, constitution tags
+  - Pull-to-refresh and load more support
+  - Filter area: constitution, efficacy, difficulty
+  - Empty state and loading state
+- Verified US-037: Recipes detail page already implemented (frontend/src/pages/recipes/detail.vue)
+  - onLoad gets id and calls loadRecipeDetail()
+  - Cover image with preview support
+  - Desc area (blue gradient background)
+  - Suitable/avoid constitutions display
+  - Ingredients list with main ingredient highlighting (yellow background)
+  - Steps with numbered circles
+  - Tip area (yellow gradient background)
+  - Related recipes section
+  - Placeholder on image error
+- Created US-038: Recipes search page (frontend/src/pages/recipes/search.vue)
+  - Top search bar with @confirm support and clear button
+  - Filter area: constitution (9 types), efficacy (11 tags), solar_term (28 terms), difficulty (3 levels), cooking_time (4 ranges)
+  - Search results list (reuses card component from list page)
+  - Clear filters button with filter summary display
+  - No results prompt (different for empty keyword vs no results)
+  - Combined filter support (keyword + filters)
+  - Load more pagination
+- Updated US-039: Added search route to pages.json
+  - path: 'pages/recipes/search', title: '搜索菜谱'
+- Files changed: frontend/src/pages/recipes/search.vue, frontend/src/pages.json, prd.json
+- **Learnings for future iterations:**
+  - Frontend pages were already mostly implemented from previous work
+  - Only US-038 (search page) needed to be created
+  - Search page uses same card component design as list page for consistency
+  - Filter state management uses local ref instead of store filters for search-specific needs
+  - Combined keyword search + filters requires conditional API call (searchRecipes vs getRecipes)
+  - Solar terms list includes both seasons (春/夏/秋/冬) and 24 solar terms (立春/雨水/etc.)
+  - Cooking time filter uses max_cooking_time (≤ comparison)
+  - Filter summary shows which filter types are active, not specific values
+  - Empty state has different messages for "no keyword entered" vs "no results found"
+
+---
