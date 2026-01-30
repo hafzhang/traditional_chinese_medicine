@@ -410,3 +410,148 @@ class TestRecipeService:
 
         assert page2["total"] == 30
         assert len(page2["items"]) == 10
+
+    def test_get_recommendations_constitution(self, db_session):
+        """测试获取推荐菜谱 - 体质推荐"""
+        # Use Python lists for JSON columns - SQLAlchemy will serialize them
+        recipes = [
+            Recipe(
+                id=f"recipe-{i:03d}",
+                name=f"食谱{i}",
+                type="粥类",
+                suitable_constitutions=["qi_deficiency"] if i % 2 == 0 else ["yin_deficiency"]
+            )
+            for i in range(1, 11)
+        ]
+        db_session.add_all(recipes)
+        db_session.commit()
+
+        service = RecipeService()
+        result = service.get_recommendations(
+            "constitution",
+            {"constitution": "qi_deficiency"},
+            limit=5,
+            db=db_session
+        )
+
+        assert result["type"] == "constitution"
+        assert result["recommendation_reason"] == "根据您的气虚质体质推荐"
+        assert len(result["items"]) == 5
+        assert all("qi_deficiency" in item["suitable_constitutions"] for item in result["items"])
+
+    def test_get_recommendations_solar_term(self, db_session):
+        """测试获取推荐菜谱 - 节气推荐"""
+        # Use Python lists for JSON columns - SQLAlchemy will serialize them
+        recipes = [
+            Recipe(
+                id=f"recipe-{i:03d}",
+                name=f"春季食谱{i}" if i % 2 == 0 else f"夏季食谱{i}",
+                type="粥类",
+                solar_terms=["春季"] if i % 2 == 0 else ["夏季"]
+            )
+            for i in range(1, 11)
+        ]
+        db_session.add_all(recipes)
+        db_session.commit()
+
+        service = RecipeService()
+        result = service.get_recommendations(
+            "solar_term",
+            {"solar_term": "春季"},
+            limit=5,
+            db=db_session
+        )
+
+        assert result["type"] == "solar_term"
+        assert result["recommendation_reason"] == "适合春季节气的养生食谱"
+        assert len(result["items"]) == 5
+        assert all("春季" in item["solar_terms"] for item in result["items"])
+
+    def test_get_recommendations_efficacy(self, db_session):
+        """测试获取推荐菜谱 - 功效推荐"""
+        # Use Python lists for JSON columns - SQLAlchemy will serialize them
+        recipes = [
+            Recipe(
+                id=f"recipe-{i:03d}",
+                name=f"健脾食谱{i}" if i % 2 == 0 else f"补血食谱{i}",
+                type="粥类",
+                efficacy_tags=["健脾"] if i % 2 == 0 else ["补血"]
+            )
+            for i in range(1, 11)
+        ]
+        db_session.add_all(recipes)
+        db_session.commit()
+
+        service = RecipeService()
+        result = service.get_recommendations(
+            "efficacy",
+            {"efficacy": "健脾"},
+            limit=5,
+            db=db_session
+        )
+
+        assert result["type"] == "efficacy"
+        assert result["recommendation_reason"] == "具有健脾功效的推荐食谱"
+        assert len(result["items"]) == 5
+        assert all("健脾" in item["efficacy_tags"] for item in result["items"])
+
+    def test_get_recommendations_invalid_type(self, db_session):
+        """测试获取推荐菜谱 - 无效类型"""
+        recipe = Recipe(id="recipe-001", name="测试食谱", type="粥类")
+        db_session.add(recipe)
+        db_session.commit()
+
+        service = RecipeService()
+        with pytest.raises(ValueError, match="Invalid recommend_type"):
+            service.get_recommendations(
+                "invalid_type",
+                {},
+                limit=5,
+                db=db_session
+            )
+
+    def test_get_recommendations_constitution_missing_param(self, db_session):
+        """测试获取推荐菜谱 - 体质推荐缺少参数"""
+        service = RecipeService()
+        with pytest.raises(ValueError, match="constitution parameter is required"):
+            service.get_recommendations(
+                "constitution",
+                {},
+                limit=5,
+                db=db_session
+            )
+
+    def test_get_recommendations_invalid_constitution(self, db_session):
+        """测试获取推荐菜谱 - 无效体质代码"""
+        service = RecipeService()
+        with pytest.raises(ValueError, match="Invalid constitution code"):
+            service.get_recommendations(
+                "constitution",
+                {"constitution": "invalid_code"},
+                limit=5,
+                db=db_session
+            )
+
+    def test_get_recommendations_limit(self, db_session):
+        """测试获取推荐菜谱 - 限制数量"""
+        recipes = [
+            Recipe(
+                id=f"recipe-{i:03d}",
+                name=f"食谱{i}",
+                type="粥类",
+                suitable_constitutions=["qi_deficiency"]
+            )
+            for i in range(1, 21)
+        ]
+        db_session.add_all(recipes)
+        db_session.commit()
+
+        service = RecipeService()
+        result = service.get_recommendations(
+            "constitution",
+            {"constitution": "qi_deficiency"},
+            limit=5,
+            db=db_session
+        )
+
+        assert len(result["items"]) == 5

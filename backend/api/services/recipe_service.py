@@ -517,6 +517,116 @@ class RecipeService:
         }
         return names.get(code, code)
 
+    def get_recommendations(
+        self,
+        recommend_type: str,
+        params: Dict[str, Any],
+        limit: int = 10,
+        db: Session = None
+    ) -> Dict[str, Any]:
+        """
+        获取推荐菜谱 (支持体质、节气、功效推荐)
+
+        Args:
+            recommend_type: 推荐类型 ('constitution', 'solar_term', 'efficacy')
+            params: 参数字典
+                - constitution: 体质代码 (当recommend_type='constitution'时)
+                - solar_term: 节气名称 (当recommend_type='solar_term'时)
+                - efficacy: 功效标签 (当recommend_type='efficacy'时)
+            limit: 限制数量，默认10
+            db: 数据库会话
+
+        Returns:
+            {type, recommendation_reason, items: List[Dict]}
+
+        Raises:
+            ValueError: 当recommend_type无效时
+        """
+        # Validate recommend_type
+        valid_types = ['constitution', 'solar_term', 'efficacy']
+        if recommend_type not in valid_types:
+            raise ValueError(f"Invalid recommend_type: {recommend_type}. Must be one of {valid_types}")
+
+        query = db.query(Recipe).filter(Recipe.is_deleted == False)
+        recommendation_reason = ""
+
+        # Apply filter based on type
+        if recommend_type == 'constitution':
+            constitution = params.get('constitution')
+            if not constitution:
+                raise ValueError("constitution parameter is required for constitution recommendations")
+            if not self.is_valid_constitution_code(constitution):
+                raise ValueError(f"Invalid constitution code: {constitution}")
+
+            # For JSON columns in SQLite, use LIKE for string search
+            # SQLAlchemy JSON stores arrays as: ["value"] so we search for "value"
+            query = query.filter(Recipe.suitable_constitutions.like(f'%"{constitution}"%'))
+            constitution_name = self.get_constitution_name(constitution)
+            recommendation_reason = f"根据您的{constitution_name}体质推荐"
+
+        elif recommend_type == 'solar_term':
+            solar_term = params.get('solar_term')
+            if not solar_term:
+                raise ValueError("solar_term parameter is required for solar_term recommendations")
+
+            # For JSON columns in SQLite, use LIKE for string search
+            # SQLAlchemy stores Chinese characters as Unicode escapes: \uXXXX
+            # So we search for both the original text and the unicode-escaped version
+            import json
+            unicode_escaped = json.dumps(solar_term)  # Returns '"\\u6625\\u5b63"' for '春季'
+            # Remove the surrounding quotes to get just \u6625\u5b63
+            unicode_pattern = unicode_escaped.strip('"')
+            query = query.filter(
+                (Recipe.solar_terms.like(f'%{unicode_pattern}%')) |
+                (Recipe.solar_terms.like(f'%"{solar_term}"%')) |
+                (Recipe.solar_terms.like(f'%{solar_term}%'))
+            )
+            recommendation_reason = f"适合{solar_term}节气的养生食谱"
+
+        elif recommend_type == 'efficacy':
+            efficacy = params.get('efficacy')
+            if not efficacy:
+                raise ValueError("efficacy parameter is required for efficacy recommendations")
+
+            # For JSON columns in SQLite, use LIKE for string search
+            # SQLAlchemy stores Chinese characters as Unicode escapes: \uXXXX
+            import json
+            unicode_escaped = json.dumps(efficacy)
+            unicode_pattern = unicode_escaped.strip('"')
+            query = query.filter(
+                (Recipe.efficacy_tags.like(f'%{unicode_pattern}%')) |
+                (Recipe.efficacy_tags.like(f'%"{efficacy}"%')) |
+                (Recipe.efficacy_tags.like(f'%{efficacy}%'))
+            )
+            recommendation_reason = f"具有{efficacy}功效的推荐食谱"
+
+        # Order by created_at desc and apply limit
+        recipes = query.order_by(Recipe.created_at.desc()).limit(limit).all()
+
+        # Convert to dict format
+        items = []
+        for recipe in recipes:
+            items.append({
+                "id": recipe.id,
+                "name": recipe.name,
+                "type": recipe.type,
+                "difficulty": recipe.difficulty,
+                "cooking_time": recipe.cooking_time or recipe.cook_time,
+                "description": recipe.description,
+                "cover_image": recipe.cover_image or recipe.image_url,
+                "suitable_constitutions": recipe.suitable_constitutions,
+                "efficacy_tags": recipe.efficacy_tags,
+                "solar_terms": recipe.solar_terms,
+                "view_count": recipe.view_count,
+                "created_at": recipe.created_at.isoformat() if recipe.created_at else None
+            })
+
+        return {
+            "type": recommend_type,
+            "recommendation_reason": recommendation_reason,
+            "items": items
+        }
+
 
 # 单例模式
 _recipe_service_instance = None
