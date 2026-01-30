@@ -1,146 +1,218 @@
 <template>
   <view class="recipe-detail-page">
     <scroll-view class="detail-scroll" scroll-y>
-      <!-- 图片区域 -->
-      <view class="image-section">
-        <image
-          v-if="recipe.image_url"
-          :src="recipe.image_url"
-          class="recipe-image"
-          mode="aspectFill"
-        />
-        <view v-else class="recipe-image placeholder">🍲</view>
+      <!-- 加载状态 -->
+      <view v-if="loading" class="loading-state">
+        <text>加载中...</text>
       </view>
 
-      <!-- 基本信息 -->
-      <view class="info-card">
-        <view class="recipe-name">{{ recipe.name }}</view>
-        <view class="recipe-meta">
-          <text class="tag type">{{ recipe.type }}</text>
-          <text class="tag difficulty" :class="recipe.difficulty">{{ recipe.difficulty }}</text>
-          <text class="time">⏱ {{ recipe.cook_time }}分钟</text>
-          <text class="servings">👤 {{ recipe.servings }}人份</text>
-        </view>
-      </view>
-
-      <!-- 功效说明 -->
-      <view class="info-card" v-if="recipe.efficacy">
-        <view class="card-title">功效</view>
-        <view class="card-content">{{ recipe.efficacy }}</view>
-        <view class="card-sub" v-if="recipe.health_benefits">{{ recipe.health_benefits }}</view>
-      </view>
-
-      <!-- 食材清单 -->
-      <view class="info-card" v-if="recipe.ingredients">
-        <view class="card-title">食材清单</view>
-        <view class="ingredients-section">
-          <view class="ingredient-group" v-if="recipe.ingredients.main">
-            <view class="group-title">主料</view>
-            <view class="ingredient-list">
-              <view class="ingredient-row" v-for="(item, index) in recipe.ingredients.main" :key="index">
-                <text class="ingredient-name">{{ item.name }}</text>
-                <text class="ingredient-amount">{{ item.amount }}</text>
-              </view>
-            </view>
-          </view>
-          <view class="ingredient-group" v-if="recipe.ingredients.auxiliary">
-            <view class="group-title">辅料</view>
-            <view class="ingredient-list">
-              <view class="ingredient-row" v-for="(item, index) in recipe.ingredients.auxiliary" :key="index">
-                <text class="ingredient-name">{{ item.name }}</text>
-                <text class="ingredient-amount">{{ item.amount }}</text>
-              </view>
-            </view>
-          </view>
-          <view class="ingredient-group" v-if="recipe.ingredients.seasoning">
-            <view class="group-title">调味</view>
-            <view class="ingredient-list">
-              <view class="ingredient-row" v-for="(item, index) in recipe.ingredients.seasoning" :key="index">
-                <text class="ingredient-name">{{ item.name }}</text>
-                <text class="ingredient-amount">{{ item.amount }}</text>
-              </view>
-            </view>
+      <!-- 内容区域 -->
+      <template v-else-if="recipe">
+        <!-- 图片区域 -->
+        <view class="image-section">
+          <image
+            v-if="recipe.cover_image"
+            :src="recipe.cover_image"
+            class="recipe-image"
+            mode="aspectFill"
+            @tap="previewImage"
+            @error="onImageError"
+          />
+          <view v-else class="recipe-image placeholder">
+            <text class="placeholder-icon">🍲</text>
           </view>
         </view>
-      </view>
 
-      <!-- 制作步骤 -->
-      <view class="info-card" v-if="recipe.steps && recipe.steps.length">
-        <view class="card-title">制作步骤</view>
-        <view class="steps-list">
-          <view class="step-item" v-for="(step, index) in recipe.steps" :key="index">
-            <view class="step-number">{{ index + 1 }}</view>
-            <view class="step-content">{{ step }}</view>
+        <!-- 基本信息 -->
+        <view class="info-card">
+          <view class="recipe-name">{{ recipe.name }}</view>
+          <view class="recipe-meta">
+            <text v-if="recipe.difficulty" class="tag difficulty" :class="getDifficultyClass(recipe.difficulty)">
+              {{ getDifficultyLabel(recipe.difficulty) }}
+            </text>
+            <text v-if="recipe.cooking_time" class="time">⏱ {{ recipe.cooking_time }}分钟</text>
+            <text v-if="recipe.calories" class="calories">🔥 {{ recipe.calories }}kcal</text>
+          </view>
+          <view v-if="recipe.description" class="recipe-description">
+            {{ recipe.description }}
           </view>
         </view>
+
+        <!-- 功效标签 -->
+        <view v-if="recipe.efficacy_tags && recipe.efficacy_tags.length" class="info-card">
+          <view class="card-title">功效标签</view>
+          <view class="tags">
+            <text v-for="tag in recipe.efficacy_tags" :key="tag" class="tag-item efficacy">
+              {{ tag }}
+            </text>
+          </view>
+        </view>
+
+        <!-- 适合体质 -->
+        <view v-if="recipe.suitable_constitutions && recipe.suitable_constitutions.length" class="info-card">
+          <view class="card-title">适合体质</view>
+          <view class="constitutions">
+            <text
+              v-for="code in recipe.suitable_constitutions"
+              :key="code"
+              class="constitution-tag suitable"
+            >
+              {{ getConstitutionName(code) }}
+            </text>
+          </view>
+        </view>
+
+        <!-- 禁忌体质 -->
+        <view v-if="recipe.avoid_constitutions && recipe.avoid_constitutions.length" class="info-card avoid">
+          <view class="card-title">禁忌体质</view>
+          <view class="constitutions">
+            <text
+              v-for="code in recipe.avoid_constitutions"
+              :key="code"
+              class="constitution-tag avoid"
+            >
+              {{ getConstitutionName(code) }}
+            </text>
+          </view>
+        </view>
+
+        <!-- 个人体验区域 (蓝色背景) -->
+        <view v-if="recipe.desc" class="info-card desc-section">
+          <view class="card-title">💭 个人体验</view>
+          <view class="card-content">{{ recipe.desc }}</view>
+        </view>
+
+        <!-- 营养信息 -->
+        <view v-if="hasNutritionInfo" class="info-card">
+          <view class="card-title">营养信息 (每100g)</view>
+          <view class="nutrition-info">
+            <view v-if="recipe.protein" class="nutrition-item">
+              <text class="nutrition-label">蛋白质</text>
+              <text class="nutrition-value">{{ recipe.protein }}g</text>
+            </view>
+            <view v-if="recipe.fat" class="nutrition-item">
+              <text class="nutrition-label">脂肪</text>
+              <text class="nutrition-value">{{ recipe.fat }}g</text>
+            </view>
+            <view v-if="recipe.carbs" class="nutrition-item">
+              <text class="nutrition-label">碳水</text>
+              <text class="nutrition-value">{{ recipe.carbs }}g</text>
+            </view>
+          </view>
+        </view>
+
+        <!-- 食材清单 -->
+        <view v-if="recipe.ingredients && recipe.ingredients.length" class="info-card">
+          <view class="card-title">食材清单</view>
+          <view class="ingredients-list">
+            <view
+              v-for="(item, index) in recipe.ingredients"
+              :key="index"
+              class="ingredient-row"
+              :class="{ main: item.is_main }"
+            >
+              <view class="ingredient-info">
+                <text v-if="item.is_main" class="main-badge">主料</text>
+                <text class="ingredient-name">{{ item.name }}</text>
+                <text v-if="item.nature" class="ingredient-nature">{{ item.nature }}</text>
+                <text v-if="item.taste" class="ingredient-taste">{{ item.taste }}</text>
+              </view>
+              <text v-if="item.amount" class="ingredient-amount">{{ item.amount }}</text>
+            </view>
+          </view>
+        </view>
+
+        <!-- 制作步骤 -->
+        <view v-if="recipe.steps && recipe.steps.length" class="info-card">
+          <view class="card-title">制作步骤</view>
+          <view class="steps-list">
+            <view
+              v-for="(step, index) in recipe.steps"
+              :key="index"
+              class="step-item"
+            >
+              <view class="step-number">{{ step.step_number || index + 1 }}</view>
+              <view class="step-content">
+                <text class="step-description">{{ step.description }}</text>
+                <text v-if="step.duration" class="step-duration">⏱ {{ step.duration }}分钟</text>
+              </view>
+              <image
+                v-if="step.image_url"
+                :src="step.image_url"
+                class="step-image"
+                mode="aspectFill"
+                @tap="previewStepImage(step.image_url)"
+              />
+            </view>
+          </view>
+        </view>
+
+        <!-- 烹饪贴士区域 (黄色背景) -->
+        <view v-if="recipe.tip" class="info-card tip-section">
+          <view class="card-title">💡 烹饪贴士</view>
+          <view class="card-content">{{ recipe.tip }}</view>
+        </view>
+
+        <!-- 适用节气 -->
+        <view v-if="recipe.solar_terms && recipe.solar_terms.length" class="info-card">
+          <view class="card-title">适用节气</view>
+          <view class="tags">
+            <text v-for="term in recipe.solar_terms" :key="term" class="tag-item season">
+              {{ term }}
+            </text>
+          </view>
+        </view>
+      </template>
+
+      <!-- 错误状态 -->
+      <view v-else class="error-state">
+        <text class="error-icon">😕</text>
+        <text class="error-text">菜谱不存在</text>
       </view>
 
-      <!-- 注意事项 -->
-      <view class="info-card warning" v-if="recipe.precautions">
-        <view class="card-title">⚠️ 注意事项</view>
-        <view class="card-content">{{ recipe.precautions }}</view>
-      </view>
-
-      <!-- 适用体质 -->
-      <view class="info-card" v-if="recipe.suitable_constitutions && recipe.suitable_constitutions.length">
-        <view class="card-title">适用体质</view>
-        <view class="constitutions">
-          <text
-            v-for="code in recipe.suitable_constitutions"
-            :key="code"
-            class="constitution-tag"
+      <!-- 相关菜谱推荐 -->
+      <view v-if="relatedRecipes.length > 0" class="info-card">
+        <view class="card-title">相关菜谱</view>
+        <view class="related-recipes">
+          <view
+            v-for="item in relatedRecipes"
+            :key="item.id"
+            class="related-item"
+            @tap="goToDetail(item.id)"
           >
-            {{ getConstitutionName(code) }}
-          </text>
+            <image
+              v-if="item.cover_image"
+              :src="item.cover_image"
+              class="related-image"
+              mode="aspectFill"
+            />
+            <view v-else class="related-image placeholder">
+              <text>🍲</text>
+            </view>
+            <view class="related-info">
+              <view class="related-name">{{ item.name }}</view>
+              <text class="related-meta">{{ getDifficultyLabel(item.difficulty) }} · {{ item.cooking_time }}分钟</text>
+            </view>
+          </view>
         </view>
-      </view>
-
-      <!-- 主治症状 -->
-      <view class="info-card" v-if="recipe.symptoms && recipe.symptoms.length">
-        <view class="card-title">主治症状</view>
-        <view class="symptoms">
-          <text v-for="symptom in recipe.symptoms" :key="symptom" class="symptom-tag">
-            {{ symptom }}
-          </text>
-        </view>
-      </view>
-
-      <!-- 适用季节 -->
-      <view class="info-card" v-if="recipe.suitable_seasons && recipe.suitable_seasons.length">
-        <view class="card-title">适用季节</view>
-        <view class="seasons">
-          <text v-for="season in recipe.suitable_seasons" :key="season" class="season-tag">
-            {{ season }}季
-          </text>
-        </view>
-      </view>
-
-      <!-- 标签 -->
-      <view class="info-card" v-if="recipe.tags && recipe.tags.length">
-        <view class="card-title">标签</view>
-        <view class="tags">
-          <text v-for="tag in recipe.tags" :key="tag" class="tag-item">
-            {{ tag }}
-          </text>
-        </view>
-      </view>
-
-      <!-- 描述 -->
-      <view class="info-card" v-if="recipe.description">
-        <view class="card-title">简介</view>
-        <view class="card-content">{{ recipe.description }}</view>
       </view>
     </scroll-view>
   </view>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
-import { getRecipeDetail } from '@/api/recipes.js'
+import { useRecipesStore } from '@/stores/recipes.js'
+
+// Store
+const store = useRecipesStore()
 
 // 数据
-const recipe = ref({})
+const recipe = ref(null)
+const relatedRecipes = ref([])
+const loading = ref(true)
+const recipeId = ref('')
 
 // 体质名称映射
 const constitutionNames = {
@@ -155,33 +227,108 @@ const constitutionNames = {
   special: '特禀质'
 }
 
+// 计算属性：是否有营养信息
+const hasNutritionInfo = computed(() => {
+  return recipe.value && (recipe.value.protein || recipe.value.fat || recipe.value.carbs)
+})
+
+// 生命周期
 onLoad((options) => {
   if (options.id) {
+    recipeId.value = options.id
     loadDetail(options.id)
   }
 })
 
+// 加载详情
 async function loadDetail(id) {
+  loading.value = true
   uni.showLoading({ title: '加载中...' })
 
   try {
-    const res = await getRecipeDetail(id)
-    if (res.code === 0) {
-      recipe.value = res.data
+    const data = await store.loadRecipeDetail(id)
+    recipe.value = data
+
+    // 加载相关推荐（基于体质）
+    if (data.suitable_constitutions && data.suitable_constitutions.length > 0) {
+      loadRelatedRecipes(data.suitable_constitutions[0], id)
     }
   } catch (e) {
-    console.error('加载食谱详情失败', e)
+    console.error('加载菜谱详情失败', e)
     uni.showToast({
       title: '加载失败',
       icon: 'none'
     })
   } finally {
+    loading.value = false
     uni.hideLoading()
   }
 }
 
+// 加载相关菜谱
+async function loadRelatedRecipes(constitution, excludeId) {
+  try {
+    const result = await store.loadRecommendations('constitution', {
+      constitution,
+      limit: 4
+    })
+
+    // 过滤掉当前菜谱
+    relatedRecipes.value = result.items.filter(item => item.id !== excludeId).slice(0, 3)
+  } catch (e) {
+    console.error('加载相关菜谱失败', e)
+  }
+}
+
+// 预览图片
+function previewImage() {
+  if (recipe.value?.cover_image) {
+    uni.previewImage({
+      urls: [recipe.value.cover_image],
+      current: 0
+    })
+  }
+}
+
+// 预览步骤图片
+function previewStepImage(imageUrl) {
+  uni.previewImage({
+    urls: [imageUrl],
+    current: 0
+  })
+}
+
+// 图片加载错误
+function onImageError() {
+  console.log('图片加载失败')
+  recipe.value.cover_image = ''
+}
+
+// 跳转到其他详情
+function goToDetail(id) {
+  uni.redirectTo({
+    url: `/pages/recipes/detail?id=${id}`
+  })
+}
+
+// 获取体质名称
 function getConstitutionName(code) {
   return constitutionNames[code] || code
+}
+
+// 获取难度标签
+function getDifficultyLabel(difficulty) {
+  const map = {
+    easy: '简单',
+    medium: '中等',
+    hard: '困难'
+  }
+  return map[difficulty] || difficulty
+}
+
+// 获取难度样式类
+function getDifficultyClass(difficulty) {
+  return difficulty
 }
 </script>
 
@@ -193,6 +340,33 @@ function getConstitutionName(code) {
 
 .detail-scroll {
   height: 100%;
+}
+
+.loading-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  font-size: 32rpx;
+  color: #999;
+}
+
+.error-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+
+  .error-icon {
+    font-size: 120rpx;
+    margin-bottom: 20rpx;
+  }
+
+  .error-text {
+    font-size: 32rpx;
+    color: #999;
+  }
 }
 
 .image-section {
@@ -210,8 +384,12 @@ function getConstitutionName(code) {
     display: flex;
     align-items: center;
     justify-content: center;
-    background: #f0f0f0;
-    font-size: 150rpx;
+    background: linear-gradient(135deg, #f5f7fa 0%, #e4e8eb 100%);
+
+    .placeholder-icon {
+      font-size: 150rpx;
+      opacity: 0.5;
+    }
   }
 }
 
@@ -221,9 +399,18 @@ function getConstitutionName(code) {
   padding: 30rpx;
   border-radius: 16rpx;
 
-  &.warning {
-    background: #fffbe6;
-    border: 1px solid #ffe58f;
+  &.desc-section {
+    background: linear-gradient(135deg, #e6f7ff 0%, #f0f5ff 100%);
+    border-left: 4rpx solid #1890ff;
+  }
+
+  &.tip-section {
+    background: linear-gradient(135deg, #fffbe6 0%, #fff7e6 100%);
+    border-left: 4rpx solid #faad14;
+  }
+
+  &.avoid {
+    border-left: 4rpx solid #ff4d4f;
   }
 }
 
@@ -237,14 +424,8 @@ function getConstitutionName(code) {
 .card-content {
   font-size: 28rpx;
   color: #666;
-  line-height: 1.6;
-}
-
-.card-sub {
-  font-size: 26rpx;
-  color: #999;
-  margin-top: 10rpx;
-  line-height: 1.5;
+  line-height: 1.8;
+  white-space: pre-wrap;
 }
 
 .recipe-name {
@@ -252,6 +433,13 @@ function getConstitutionName(code) {
   font-weight: bold;
   color: #333;
   margin-bottom: 20rpx;
+}
+
+.recipe-description {
+  font-size: 28rpx;
+  color: #666;
+  line-height: 1.6;
+  margin-top: 20rpx;
 }
 
 .recipe-meta {
@@ -266,63 +454,151 @@ function getConstitutionName(code) {
   border-radius: 20rpx;
   font-size: 24rpx;
 
-  &.type {
-    background: #e6f7ff;
-    color: #1890ff;
-  }
-
   &.difficulty {
-    &.简单 {
+    &.easy {
       background: #f6ffed;
       color: #52c41a;
     }
-    &.中等 {
+    &.medium {
       background: #fff7e6;
       color: #fa8c16;
     }
-    &.困难 {
+    &.hard {
       background: #fff1f0;
       color: #ff4d4f;
     }
   }
 }
 
-.time, .servings {
+.time, .calories {
   font-size: 26rpx;
   color: #999;
 }
 
-.ingredients-section {
+.tags {
   display: flex;
-  flex-direction: column;
-  gap: 30rpx;
+  gap: 10rpx;
+  flex-wrap: wrap;
 }
 
-.ingredient-group {
-  .group-title {
-    font-size: 28rpx;
-    font-weight: bold;
-    color: #333;
-    margin-bottom: 15rpx;
+.tag-item {
+  padding: 8rpx 20rpx;
+  border-radius: 20rpx;
+  font-size: 26rpx;
+
+  &.efficacy {
+    background: #f0f5ff;
+    color: #1890ff;
+  }
+
+  &.season {
+    background: #f6ffed;
+    color: #52c41a;
   }
 }
 
-.ingredient-list {
+.constitutions {
+  display: flex;
+  gap: 10rpx;
+  flex-wrap: wrap;
+}
+
+.constitution-tag {
+  padding: 8rpx 20rpx;
+  border-radius: 20rpx;
+  font-size: 26rpx;
+
+  &.suitable {
+    background: #f0f5ff;
+    color: #1890ff;
+  }
+
+  &.avoid {
+    background: #fff1f0;
+    color: #ff4d4f;
+  }
+}
+
+.nutrition-info {
+  display: flex;
+  justify-content: space-around;
+  padding: 20rpx 0;
+}
+
+.nutrition-item {
   display: flex;
   flex-direction: column;
+  align-items: center;
   gap: 10rpx;
+}
+
+.nutrition-label {
+  font-size: 24rpx;
+  color: #999;
+}
+
+.nutrition-value {
+  font-size: 32rpx;
+  font-weight: bold;
+  color: #1890ff;
+}
+
+.ingredients-list {
+  display: flex;
+  flex-direction: column;
+  gap: 5rpx;
 }
 
 .ingredient-row {
   display: flex;
   justify-content: space-between;
-  padding: 15rpx 0;
-  border-bottom: 1px solid #f0f0f0;
+  align-items: center;
+  padding: 15rpx;
+  border-radius: 10rpx;
+  background: #f9f9f9;
+
+  &.main {
+    background: #fff7e6;
+    border-left: 4rpx solid #faad14;
+  }
+}
+
+.ingredient-info {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 10rpx;
+  flex-wrap: wrap;
+}
+
+.main-badge {
+  padding: 4rpx 10rpx;
+  border-radius: 8rpx;
+  background: #faad14;
+  color: #fff;
+  font-size: 20rpx;
 }
 
 .ingredient-name {
   font-size: 28rpx;
   color: #333;
+  font-weight: 500;
+}
+
+.ingredient-nature {
+  padding: 4rpx 10rpx;
+  border-radius: 8rpx;
+  background: #f6ffed;
+  color: #52c41a;
+  font-size: 22rpx;
+}
+
+.ingredient-taste {
+  padding: 4rpx 10rpx;
+  border-radius: 8rpx;
+  background: #f0f5ff;
+  color: #1890ff;
+  font-size: 22rpx;
 }
 
 .ingredient-amount {
@@ -333,12 +609,13 @@ function getConstitutionName(code) {
 .steps-list {
   display: flex;
   flex-direction: column;
-  gap: 20rpx;
+  gap: 25rpx;
 }
 
 .step-item {
   display: flex;
   gap: 15rpx;
+  position: relative;
 }
 
 .step-number {
@@ -357,41 +634,78 @@ function getConstitutionName(code) {
 
 .step-content {
   flex: 1;
-  font-size: 28rpx;
-  color: #666;
-  line-height: 1.6;
-  padding-top: 5rpx;
-}
-
-.constitutions, .symptoms, .seasons, .tags {
   display: flex;
+  flex-direction: column;
   gap: 10rpx;
-  flex-wrap: wrap;
 }
 
-.constitution-tag, .symptom-tag, .season-tag, .tag-item {
-  padding: 8rpx 20rpx;
-  border-radius: 20rpx;
-  font-size: 26rpx;
+.step-description {
+  font-size: 28rpx;
+  color: #333;
+  line-height: 1.6;
 }
 
-.constitution-tag {
-  background: #f0f5ff;
-  color: #597ef7;
+.step-duration {
+  font-size: 24rpx;
+  color: #999;
 }
 
-.symptom-tag {
-  background: #fff7e6;
-  color: #fa8c16;
+.step-image {
+  width: 120rpx;
+  height: 120rpx;
+  border-radius: 10rpx;
+  flex-shrink: 0;
 }
 
-.season-tag {
-  background: #f6ffed;
-  color: #52c41a;
+.related-recipes {
+  display: flex;
+  flex-direction: column;
+  gap: 15rpx;
 }
 
-.tag-item {
-  background: #f5f5f5;
-  color: #666;
+.related-item {
+  display: flex;
+  gap: 15rpx;
+  padding: 15rpx;
+  background: #f9f9f9;
+  border-radius: 10rpx;
+}
+
+.related-image {
+  width: 120rpx;
+  height: 120rpx;
+  border-radius: 10rpx;
+  flex-shrink: 0;
+
+  &.placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f0f0f0;
+    font-size: 50rpx;
+  }
+}
+
+.related-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 10rpx;
+}
+
+.related-name {
+  font-size: 28rpx;
+  font-weight: bold;
+  color: #333;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.related-meta {
+  font-size: 24rpx;
+  color: #999;
 }
 </style>
