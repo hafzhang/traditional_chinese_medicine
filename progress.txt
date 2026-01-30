@@ -389,3 +389,21 @@ Started: Thu, Jan 30, 2026 10:30:00 AM
   - The PRD recipe_id type is int but actual implementation uses str (UUID) - this is fine as UUID strings are the standard in this codebase
 
 ---
+
+## [2026-01-30] - US-025
+- Implemented get_recipes method with filters, pagination, and sorting
+- Filters supported: constitution (contains), efficacy (contains), solar_term (contains), difficulty (==), max_cooking_time (<=)
+- Sorting options: created_at_desc, view_count_desc, cooking_time_asc
+- Returns dict format: {total, page, page_size, items: List[Dict]}
+- Default page_size=20, page=1
+- Items include: id, name, type, difficulty, cooking_time, description, cover_image, suitable_constitutions, efficacy_tags, solar_terms, view_count, created_at
+- Added 6 unit tests: no filters, constitution filter, difficulty filter, max_cooking_time filter, sort by view count, pagination
+- All 147 tests pass (141 Phase 1 + import_recipes + 6 new)
+- Files changed: backend/api/services/recipe_service.py, backend/tests/test_unit/test_recipes.py, prd.json, progress.txt
+- **Learnings for future iterations:**
+  - Use or_ to combine multiple field conditions for the same filter (cooking_time OR cook_time)
+  - Pagination offset calculation: (page - 1) * page_size
+  - Return dict format is cleaner for API responses than ORM objects
+  - Filters dict is flexible - can add new filters without changing method signature
+
+---

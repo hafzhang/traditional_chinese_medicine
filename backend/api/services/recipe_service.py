@@ -122,6 +122,97 @@ class RecipeService:
         """
         return self._get_recipe_entity_by_id(recipe_id, db)
 
+    def get_recipes(
+        self,
+        filters: Dict[str, Any],
+        page: int = 1,
+        page_size: int = 20,
+        db: Session = None
+    ) -> Dict[str, Any]:
+        """
+        获取菜谱列表 (支持筛选、分页、排序)
+
+        Args:
+            filters: 筛选条件字典，支持的键:
+                - constitution: 体质 (contains)
+                - efficacy: 功效标签 (contains)
+                - solar_term: 节气 (contains)
+                - difficulty: 难度 (==)
+                - max_cooking_time: 最大烹饪时间 (<=)
+            page: 页码，默认1
+            page_size: 每页数量，默认20
+            db: 数据库会话
+
+        Returns:
+            {total, page, page_size, items: List[Dict]}
+        """
+        query = db.query(Recipe).filter(Recipe.is_deleted == False)
+
+        # Apply filters
+        if "constitution" in filters and filters["constitution"]:
+            query = query.filter(Recipe.suitable_constitutions.contains(filters["constitution"]))
+
+        if "efficacy" in filters and filters["efficacy"]:
+            query = query.filter(Recipe.efficacy_tags.contains(filters["efficacy"]))
+
+        if "solar_term" in filters and filters["solar_term"]:
+            query = query.filter(Recipe.solar_terms.contains(filters["solar_term"]))
+
+        if "difficulty" in filters and filters["difficulty"]:
+            query = query.filter(Recipe.difficulty == filters["difficulty"])
+
+        if "max_cooking_time" in filters and filters["max_cooking_time"] is not None:
+            # Try cooking_time first, fall back to cook_time
+            cooking_time_field = Recipe.cook_time if Recipe.cook_time is not None else Recipe.cook_time
+            query = query.filter(
+                (Recipe.cooking_time <= filters["max_cooking_time"]) |
+                (Recipe.cook_time <= filters["max_cooking_time"])
+            )
+
+        # Calculate total
+        total = query.count()
+
+        # Apply sorting
+        sort_by = filters.get("sort_by", "created_at_desc")
+        if sort_by == "created_at_desc":
+            query = query.order_by(Recipe.created_at.desc())
+        elif sort_by == "view_count_desc":
+            query = query.order_by(Recipe.view_count.desc())
+        elif sort_by == "cooking_time_asc":
+            query = query.order_by(
+                (Recipe.cooking_time.asc().nulls_last()),
+                (Recipe.cook_time.asc().nulls_last())
+            )
+
+        # Apply pagination
+        offset = (page - 1) * page_size
+        recipes = query.offset(offset).limit(page_size).all()
+
+        # Convert to dict format
+        items = []
+        for recipe in recipes:
+            items.append({
+                "id": recipe.id,
+                "name": recipe.name,
+                "type": recipe.type,
+                "difficulty": recipe.difficulty,
+                "cooking_time": recipe.cooking_time or recipe.cook_time,
+                "description": recipe.description,
+                "cover_image": recipe.cover_image or recipe.image_url,
+                "suitable_constitutions": recipe.suitable_constitutions,
+                "efficacy_tags": recipe.efficacy_tags,
+                "solar_terms": recipe.solar_terms,
+                "view_count": recipe.view_count,
+                "created_at": recipe.created_at.isoformat() if recipe.created_at else None
+            })
+
+        return {
+            "total": total,
+            "page": page,
+            "page_size": page_size,
+            "items": items
+        }
+
     def get_recipes_list(
         self,
         db: Session,
