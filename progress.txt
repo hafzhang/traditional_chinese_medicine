@@ -426,3 +426,27 @@ Started: Thu, Jan 30, 2026 10:30:00 AM
   - efficacy_tags search works best when keyword also appears in recipe name for test data
 
 ---
+
+## [2026-01-30] - US-027
+- Implemented get_recommendations method in RecipeService with three recommendation types
+- Constitution recommendations: queries suitable_constitutions JSON column
+- Solar term recommendations: queries solar_terms JSON column
+- Efficacy recommendations: queries efficacy_tags JSON column
+- Validates recommend_type and required parameters, raises ValueError on invalid input
+- Generates recommendation_reason text for each type
+- Returns dict format: {type, recommendation_reason, items: List[Dict]}
+- Added 7 unit tests: constitution, solar_term, efficacy, invalid_type, missing_param, invalid_constitution, limit
+- All 28 recipe service tests pass (152 total Phase 1 + import_recipes + recipes)
+- Files changed: backend/api/services/recipe_service.py, backend/tests/test_unit/test_recipes.py, prd.json, progress.txt
+- **Learnings for future iterations:**
+  - JSON columns in SQLAlchemy serialize Chinese characters as Unicode escapes (\uXXXX)
+  - When searching JSON columns with LIKE, need to account for unicode escape format
+  - Use json.dumps() to get the unicode-escaped version of Chinese text for LIKE queries
+  - Pattern matching: search for both unicode-escaped and original text for compatibility
+  - For example: '春季' becomes '\\u6625\\u5b63' in JSON storage
+  - The LIKE pattern should be: %\\u6625\\u5b63% to match the stored JSON
+  - SQLAlchemy's JSON column type automatically serializes Python lists to JSON strings
+  - When querying, use LIKE with unicode escape patterns: %\\uXXXX%
+  - For maximum compatibility, search multiple patterns: unicode_escaped, quoted, and plain text
+
+---
