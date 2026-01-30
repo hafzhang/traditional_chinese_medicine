@@ -539,3 +539,30 @@ Started: Thu, Jan 30, 2026 10:30:00 AM
   - The store pattern keeps API calls separate from components, following separation of concerns
 
 ---
+
+## [2026-01-30] - US-036
+- Updated frontend/src/pages/recipes/list.vue for Excel Import API structure
+- Now uses useRecipesStore from Pinia instead of local state management
+- Uses <script setup> and composition API (onMounted, onLoad from @dcloudio/uni-app)
+- Recipe cards display: cover image (lazy-load), name, description, difficulty, cooking time, calories, efficacy tags (up to 3), suitable constitutions (up to 2)
+- Image lazy-load with @error handler that clears cover_image to show placeholder
+- Pull-to-refresh using refresher-enabled and @refresherrefresh
+- Load more using @scrolltolower with store.hasMore check
+- Filter section includes: constitution (9 types), efficacy (11 tags), difficulty (3 levels)
+- Empty state shows when no recipes and not loading
+- Loading state shows during store.loadRecipes operations
+- Click card navigates to detail page with uni.navigateTo
+- Files changed: frontend/src/pages/recipes/list.vue
+- **Learnings for future iterations:**
+  - The existing list.vue used Phase 1 API structure (skip/limit), needed to update to new API (page/page_size)
+  - Pull-to-refresh in uni-app uses refresher-enabled prop and @refresherrefresh event
+  - Lazy loading images uses lazy-load prop on <image> component
+  - Image error handling requires @error event and manual clearing of src
+  - Store integration simplifies component logic - no local pagination management needed
+  - Empty state should check both !loading && recipes.length === 0 to avoid flash
+  - Filter options are hardcoded in component (constitutions, efficacies) for quick access
+  - Playwright MCP not available in current environment - UI testing requires manual browser verification
+  - Recipe data structure changed: image_url -> cover_image, cook_time -> cooking_time
+  - Difficulty values are now English codes (easy/medium/hard) not Chinese
+
+---
