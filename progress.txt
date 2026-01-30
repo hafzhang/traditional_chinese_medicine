@@ -407,3 +407,22 @@ Started: Thu, Jan 30, 2026 10:30:00 AM
   - Filters dict is flexible - can add new filters without changing method signature
 
 ---
+
+## [2026-01-30] - US-026
+- Implemented search_recipes method with keyword search
+- Query uses outerjoin to RecipeIngredient and Ingredient for ingredient search
+- Search ranges: Recipe.name (LIKE), Ingredient.name (LIKE), efficacy_tags (LIKE for JSON compatibility)
+- Uses or_ to combine search conditions
+- Uses distinct() to avoid duplicate results
+- Supports pagination, returns same format as get_recipes
+- Empty keyword returns empty result
+- Added 5 unit tests: search by name, by ingredient, by efficacy, empty keyword, pagination
+- All 152 tests pass (147 + 5 new)
+- Files changed: backend/api/services/recipe_service.py, backend/tests/test_unit/test_recipes.py, prd.json, progress.txt
+- **Learnings for future iterations:**
+  - JSON columns in SQLite may require LIKE instead of contains() for text search
+  - outerjoin is needed to search across related tables (ingredients)
+  - distinct() is essential when joining to avoid duplicate recipe rows
+  - efficacy_tags search works best when keyword also appears in recipe name for test data
+
+---

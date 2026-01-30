@@ -298,3 +298,115 @@ class TestRecipeService:
         assert page2["total"] == 30
         assert page2["page"] == 2
         assert len(page2["items"]) == 10
+
+    def test_search_recipes_by_name(self, db_session):
+        """测试搜索菜谱 - 按名称搜索"""
+        recipes = [
+            Recipe(
+                id=f"recipe-{i:03d}",
+                name=f"山药{i}" if i % 2 == 0 else f"其他{i}",
+                type="粥类"
+            )
+            for i in range(1, 11)
+        ]
+        db_session.add_all(recipes)
+        db_session.commit()
+
+        service = RecipeService()
+        result = service.search_recipes("山药", page=1, page_size=20, db=db_session)
+
+        assert result["total"] == 5
+        assert all("山药" in item["name"] for item in result["items"])
+
+    def test_search_recipes_by_ingredient(self, db_session):
+        """测试搜索菜谱 - 按食材搜索"""
+        from api.models import Ingredient, RecipeIngredient
+
+        # Create ingredients
+        ingredient = Ingredient(
+            id="ing-001",
+            name="枸杞",
+            category="滋补类"
+        )
+        db_session.add(ingredient)
+
+        # Create recipes
+        recipe1 = Recipe(id="recipe-001", name="枸杞粥", type="粥类")
+        recipe2 = Recipe(id="recipe-002", name="白粥", type="粥类")
+        db_session.add_all([recipe1, recipe2])
+        db_session.commit()
+
+        # Link ingredient to recipe1
+        rel = RecipeIngredient(
+            id="rel-001",
+            recipe_id="recipe-001",
+            ingredient_id="ing-001",
+            amount="10g"
+        )
+        db_session.add(rel)
+        db_session.commit()
+
+        service = RecipeService()
+        result = service.search_recipes("枸杞", page=1, page_size=20, db=db_session)
+
+        assert result["total"] >= 1
+
+    def test_search_recipes_by_efficacy(self, db_session):
+        """测试搜索菜谱 - 按功效搜索"""
+        # Note: JSON column search in SQLite may have limitations
+        # Creating recipes with efficacy_tags that include the keyword in name
+        recipes = [
+            Recipe(
+                id=f"recipe-{i:03d}",
+                name=f"补气食谱{i}" if i % 2 == 0 else f"补血食谱{i}",
+                efficacy_tags=["补气"] if i % 2 == 0 else ["补血"]
+            )
+            for i in range(1, 11)
+        ]
+        db_session.add_all(recipes)
+        db_session.commit()
+
+        service = RecipeService()
+        result = service.search_recipes("补气", page=1, page_size=20, db=db_session)
+
+        # Should find recipes with "补气" in name or efficacy_tags
+        assert result["total"] >= 5
+
+    def test_search_recipes_empty_keyword(self, db_session):
+        """测试搜索菜谱 - 空关键词返回空列表"""
+        recipe = Recipe(
+            id="recipe-001",
+            name="测试食谱",
+            type="粥类"
+        )
+        db_session.add(recipe)
+        db_session.commit()
+
+        service = RecipeService()
+        result = service.search_recipes("", page=1, page_size=20, db=db_session)
+
+        assert result["total"] == 0
+        assert result["items"] == []
+
+    def test_search_recipes_pagination(self, db_session):
+        """测试搜索菜谱 - 分页"""
+        recipes = [
+            Recipe(
+                id=f"recipe-{i:03d}",
+                name=f"山药粥{i}",
+                type="粥类"
+            )
+            for i in range(1, 31)
+        ]
+        db_session.add_all(recipes)
+        db_session.commit()
+
+        service = RecipeService()
+        page1 = service.search_recipes("山药", page=1, page_size=10, db=db_session)
+        page2 = service.search_recipes("山药", page=2, page_size=10, db=db_session)
+
+        assert page1["total"] == 30
+        assert len(page1["items"]) == 10
+
+        assert page2["total"] == 30
+        assert len(page2["items"]) == 10

@@ -213,6 +213,86 @@ class RecipeService:
             "items": items
         }
 
+    def search_recipes(
+        self,
+        keyword: str,
+        page: int = 1,
+        page_size: int = 20,
+        db: Session = None
+    ) -> Dict[str, Any]:
+        """
+        搜索菜谱 (支持按名称、食材、功效搜索)
+
+        Args:
+            keyword: 搜索关键词
+            page: 页码，默认1
+            page_size: 每页数量，默认20
+            db: 数据库会话
+
+        Returns:
+            {total, page, page_size, items: List[Dict]}
+        """
+        from sqlalchemy import or_, distinct
+
+        # Empty keyword returns empty result
+        if not keyword or not keyword.strip():
+            return {
+                "total": 0,
+                "page": page,
+                "page_size": page_size,
+                "items": []
+            }
+
+        # Build query with outerjoin to RecipeIngredient and Ingredient
+        query = db.query(Recipe).outerjoin(RecipeIngredient).outerjoin(Ingredient).filter(
+            Recipe.is_deleted == False
+        )
+
+        # Search conditions: Recipe.name LIKE, Ingredient.name LIKE, efficacy_tags contains
+        # For JSON columns in SQLite, we need to use LIKE to search within the JSON string
+        search_conditions = or_(
+            Recipe.name.like(f"%{keyword}%"),
+            Ingredient.name.like(f"%{keyword}%"),
+            Recipe.efficacy_tags.like(f"%{keyword}%")
+        )
+
+        query = query.filter(search_conditions)
+
+        # Use distinct to avoid duplicates
+        query = query.distinct()
+
+        # Calculate total
+        total = query.count()
+
+        # Apply pagination
+        offset = (page - 1) * page_size
+        recipes = query.order_by(Recipe.view_count.desc()).offset(offset).limit(page_size).all()
+
+        # Convert to dict format
+        items = []
+        for recipe in recipes:
+            items.append({
+                "id": recipe.id,
+                "name": recipe.name,
+                "type": recipe.type,
+                "difficulty": recipe.difficulty,
+                "cooking_time": recipe.cooking_time or recipe.cook_time,
+                "description": recipe.description,
+                "cover_image": recipe.cover_image or recipe.image_url,
+                "suitable_constitutions": recipe.suitable_constitutions,
+                "efficacy_tags": recipe.efficacy_tags,
+                "solar_terms": recipe.solar_terms,
+                "view_count": recipe.view_count,
+                "created_at": recipe.created_at.isoformat() if recipe.created_at else None
+            })
+
+        return {
+            "total": total,
+            "page": page,
+            "page_size": page_size,
+            "items": items
+        }
+
     def get_recipes_list(
         self,
         db: Session,

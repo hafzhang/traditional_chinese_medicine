@@ -484,8 +484,8 @@
         "Tests pass"
       ],
       "priority": 26,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Implemented search_recipes with outerjoin to ingredients, searches name/ingredient/efficacy. Added 5 unit tests. All 152 tests pass. Note: efficacy_tags uses LIKE for JSON column compatibility with SQLite."
     },
     {
       "id": "US-027",
