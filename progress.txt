@@ -84,3 +84,31 @@ Started: Thu, Jan 30, 2026 10:30:00 AM
   - PRAGMA foreign_key_check validates all foreign key constraints in SQLite
 
 ---
+
+## [2026-01-30] - US-005
+- Updated backend/scripts/recipe_import_config.py to match PRD requirements
+- Changed COLUMN_MAPPING to match exact PRD specification: 'steptext': 'steps_text', 'QuantityIngredients': 'ingredients_text'
+- Renamed DIFFICULTY_CN_TO_CODE to DIFFICULTY_MAP per PRD
+- Renamed CONSTITUTION_CN_TO_CODE to CONSTITUTION_MAP per PRD
+- Updated EFFICACY_TAGS to only include 11 specific tags (was 15)
+- Added FOOD_SYNONYMS dictionary with common ingredient synonyms
+- Updated parse_cooking_time signature to return Optional[int] instead of default 30
+- Updated parse_cooking_time to return max value for ranges like "10-30分钟" (was average)
+- Updated parse_cooking_time to return None when parsing fails (was 30)
+- All test cases pass:
+  - "10-30分钟" → 30 (max)
+  - "约30分钟" → 30
+  - "半小时" → 30
+  - "1小时" → 60
+  - "invalid" → None
+  - "" → None
+  - None → None
+- Files changed: backend/scripts/recipe_import_config.py
+- **Learnings for future iterations:**
+  - The config file already existed from previous work but needed adjustments to match PRD
+  - PRD specifies exact return values (max not average for ranges)
+  - PRD specifies exact behavior (None not default values)
+  - Naming conventions matter: DIFFICULTY_MAP vs DIFFICULTY_CN_TO_CODE
+  - Order of regex matching matters: check ranges before single numbers to avoid partial matches
+
+---
