@@ -728,7 +728,7 @@
       ],
       "priority": 39,
       "passes": true,
-      "notes": "Routes already configured in pages.json: list.vue (path 'pages/recipes/list', title '食谱库'), detail.vue (path 'pages/recipes/detail', title '食谱详情'). Note: search.vue route needs to be added after US-038 is complete."
+      "notes": "All routes configured in pages.json: list.vue (path 'pages/recipes/list', title '食谱库'), detail.vue (path 'pages/recipes/detail', title '食谱详情'), search.vue (path 'pages/recipes/search', title '搜索菜谱')."
     }
   ]
 }
