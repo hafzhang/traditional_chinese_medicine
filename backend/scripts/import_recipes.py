@@ -339,6 +339,96 @@ def import_single_recipe(row: Dict[str, Any], image_map: Dict[str, str], db: Ses
         return None
 
 
+def import_recipes_batch(
+    df: pd.DataFrame,
+    limit: Optional[int],
+    db: Session,
+    dry_run: bool
+) -> ImportStats:
+    """
+    批量导入菜谱
+    扫描图片目录，遍历DataFrame导入数据，支持进度显示和事务管理
+
+    扫描图片目录: image_map = scan_dish_images()
+    遍历DataFrame (limit限制数量)
+    每10条输出进度，每100条提交一次事务
+    调用 import_single_recipe() 导入单条
+    更新stats: success/skipped/failed
+    完成后提交剩余事务
+    异常时回滚: db.session.rollback()
+    返回ImportStats
+
+    Args:
+        df: Excel数据的DataFrame
+        limit: 限制导入数量，None表示不限制
+        db: 数据库会话
+        dry_run: 是否为模拟运行
+
+    Returns:
+        ImportStats导入统计对象
+    """
+    from scripts.recipe_import_config import scan_dish_images
+
+    stats = ImportStats()
+    stats.total = min(len(df), limit) if limit else len(df)
+
+    logger.info(f"开始批量导入，总计 {stats.total} 条菜谱")
+
+    # 扫描图片目录
+    logger.info("扫描图片目录...")
+    image_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'source_data', 'dishes_images')
+    image_map = scan_dish_images(image_dir)
+    logger.info(f"图片扫描完成，找到 {len(image_map)} 张图片")
+
+    # 确定要处理的行数
+    rows_to_process = df.head(limit) if limit else df
+
+    # 遍历导入
+    for idx, row in rows_to_process.iterrows():
+        try:
+            # 调用单条导入
+            recipe = import_single_recipe(row, image_map, db, dry_run)
+
+            if recipe is None:
+                # 跳过的菜谱（已存在）
+                stats.skipped += 1
+            else:
+                # 成功导入
+                stats.success += 1
+
+            # 每10条输出进度
+            if (stats.success + stats.skipped + stats.failed) % 10 == 0:
+                progress = (stats.success + stats.skipped + stats.failed)
+                logger.info(f"进度: {progress}/{stats.total} - {stats}")
+
+            # 每100条提交一次事务（非dry-run模式）
+            if not dry_run and (stats.success + stats.skipped + stats.failed) % 100 == 0:
+                db.commit()
+                logger.info(f"事务提交: 已处理 {stats.success + stats.skipped + stats.failed} 条")
+
+        except Exception as e:
+            # 单条导入失败
+            recipe_name = row.get('title', '未知')
+            error_msg = f"{recipe_name}: {str(e)}"
+            stats.add_error(error_msg)
+            stats.failed += 1
+            logger.error(f"导入失败: {error_msg}")
+
+            # 回滚当前事务
+            db.rollback()
+
+    # 提交剩余事务
+    if not dry_run and stats.success > 0:
+        try:
+            db.commit()
+            logger.info("最终事务提交完成")
+        except Exception as e:
+            logger.error(f"最终提交失败: {e}")
+            db.rollback()
+
+    return stats
+
+
 def main():
     """主函数 - 导入脚本入口"""
     parser = argparse.ArgumentParser(
@@ -378,25 +468,44 @@ def main():
     if args.limit:
         logger.info(f"限制数量: {args.limit}")
 
-    # TODO: 后续用户故事将实现完整的导入逻辑
+    # 已实现的功能:
     # US-017: ✅ 加载Excel文件
     # US-018: ✅ 检查菜谱是否存在
     # US-019: ✅ 验证和关联食材
     # US-020: ✅ 单条导入逻辑
-    # US-021: 批量导入逻辑
+    # US-021: ✅ 批量导入逻辑
+
+    db = None
+    stats = ImportStats()
 
     try:
         # US-017: 加载 Excel 文件
         df = load_excel(args.file)
-        stats = ImportStats()
-        stats.total = len(df)
-        logger.info(f"Excel 文件加载成功，共 {stats.total} 条菜谱数据")
-    except Exception as e:
-        logger.error(f"加载 Excel 文件失败: {e}")
-        stats = ImportStats()
-        stats.failed = 1
 
-    print_summary(stats)
+        # 创建数据库会话
+        db = SessionLocal()
+
+        # US-021: 批量导入
+        stats = import_recipes_batch(df, args.limit, db, args.dry_run)
+
+        logger.info("导入完成")
+        print_summary(stats)
+
+    except FileNotFoundError as e:
+        logger.error(f"文件错误: {e}")
+        stats.failed = 1
+        print_summary(stats)
+    except ValueError as e:
+        logger.error(f"数据验证错误: {e}")
+        stats.failed = 1
+        print_summary(stats)
+    except Exception as e:
+        logger.error(f"导入过程出错: {e}")
+        stats.failed = 1
+        print_summary(stats)
+    finally:
+        if db:
+            db.close()
 
 
 if __name__ == '__main__':
