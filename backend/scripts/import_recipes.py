@@ -7,11 +7,19 @@
 
 import argparse
 import logging
+import os
 import sys
 from pathlib import Path
 from typing import Optional, Dict, Any, List
 
 import pandas as pd
+from sqlalchemy.orm import Session
+
+# Setup path to import from parent directory
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from api.database import SessionLocal
+from api.models import Recipe
 
 # 配置日志
 logging.basicConfig(
@@ -109,6 +117,20 @@ def load_excel(file_path: str) -> pd.DataFrame:
     return df
 
 
+def check_recipe_exists(name: str, db: Session) -> bool:
+    """
+    检查菜谱是否已存在
+    查询: db.query(Recipe).filter_by(name=name).first()
+    找到记录返回True，否则返回False
+    记录日志: '跳过已存在: {name}'
+    """
+    recipe = db.query(Recipe).filter_by(name=name).first()
+    if recipe is not None:
+        logger.info(f"跳过已存在: {name}")
+        return True
+    return False
+
+
 def main():
     """主函数 - 导入脚本入口"""
     parser = argparse.ArgumentParser(
@@ -150,7 +172,7 @@ def main():
 
     # TODO: 后续用户故事将实现完整的导入逻辑
     # US-017: ✅ 加载Excel文件
-    # US-018: 检查菜谱是否存在
+    # US-018: ✅ 检查菜谱是否存在
     # US-019: 验证和关联食材
     # US-020: 单条导入逻辑
     # US-021: 批量导入逻辑
