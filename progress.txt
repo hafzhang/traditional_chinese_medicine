@@ -61,3 +61,26 @@ Started: Thu, Jan 30, 2026 10:30:00 AM
   - Step duration is stored in minutes for easier calculation
 
 ---
+
+## [2026-01-30] - US-004
+- Created migrate_recipes.py migration script following project's custom migration pattern
+- Used sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__)))) for path setup
+- Script creates all tables via Base.metadata.create_all(bind=engine)
+- Added 'carbs' column to recipes table (was missing, only had 'carbohydrates')
+- Implemented comprehensive verification using SQLAlchemy inspect
+- All verification checks passed:
+  - recipes table: all required fields present including 'carbs'
+  - recipe_ingredients table: all fields present, unique constraint on (recipe_id, ingredient_id) exists
+  - recipe_steps table: all fields present
+  - recipes.name index exists
+  - No foreign key violations (PRAGMA foreign_key_check passed)
+- Files changed: backend/migrations/migrate_recipes.py
+- **Learnings for future iterations:**
+  - Tables are automatically created by SQLAlchemy when models are imported
+  - Use inspector.get_columns() to check for missing columns before ALTER TABLE
+  - SQLite requires explicit ADD COLUMN for missing columns
+  - UniqueConstraint in __table_args__ creates both constraint and unique index
+  - The verification pattern using inspect() is reusable for all migration scripts
+  - PRAGMA foreign_key_check validates all foreign key constraints in SQLite
+
+---
