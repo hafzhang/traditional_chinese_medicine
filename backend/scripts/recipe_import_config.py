@@ -3,15 +3,19 @@
 定义字段映射关系和验证规则
 """
 
+from typing import Optional, Dict, List, Any
+import re
+
+
 # Excel 列名到数据库字段的映射
 COLUMN_MAPPING = {
     # 基本信息映射
     'title': 'name',                    # 菜谱名称 -> name
-    'desc': 'description',              # 描述 -> description
     'costtime': 'cooking_time',         # 烹饪时间字符串 -> cooking_time (需要解析)
-    'QuantityIngredients': None,        # 食材用量 -> 单独处理
-    'steptext': None,                   # 步骤文本 -> 单独处理
-    'tip': None,                        # 小贴士 -> 可选，暂不存储
+    'steptext': 'steps_text',           # 步骤文本 -> steps_text (需要解析)
+    'QuantityIngredients': 'ingredients_text',  # 食材用量 -> ingredients_text (需要解析)
+    'desc': 'description',              # 描述 -> description
+    'tip': 'tip',                       # 小贴士 -> tip
 
     # 新增字段映射
     'meal_type': 'meal_type',           # 餐次类型
@@ -47,7 +51,6 @@ CONSTITUTION_CODES = [
 EFFICACY_TAGS = [
     '健脾', '养胃', '补气', '补血', '养阴',
     '温阳', '化痰', '祛湿', '活血', '疏肝', '安神',
-    '润肺', '补肾', '清热', '解毒', '止痛'
 ]
 
 # 节气标签列表
@@ -70,13 +73,15 @@ MEAL_TYPE_CN_TO_CODE = {
     '汤品': 'soup',
 }
 
-DIFFICULTY_CN_TO_CODE = {
+# DIFFICULTY_MAP: 难度中文到代码的映射
+DIFFICULTY_MAP = {
     '简单': 'easy',
     '中等': 'medium',
     '困难': 'hard',
 }
 
-CONSTITUTION_CN_TO_CODE = {
+# CONSTITUTION_MAP: 体质中文名到代码的映射
+CONSTITUTION_MAP = {
     '平和质': 'peace',
     '气虚质': 'qi_deficiency',
     '阳虚质': 'yang_deficiency',
@@ -88,40 +93,62 @@ CONSTITUTION_CN_TO_CODE = {
     '特禀质': 'special',
 }
 
+# FOOD_SYNONYMS: 食材同义词字典
+FOOD_SYNONYMS = {
+    '西红柿': ['番茄', '洋柿子'],
+    '土豆': ['马铃薯', '洋芋'],
+    '红薯': ['甘薯', '地瓜'],
+    '山药': ['淮山', '怀山药', '薯蓣'],
+    '茄子': ['落苏'],
+    '辣椒': ['海椒', '辣子'],
+    '黄瓜': ['青瓜'],
+    '洋葱': ['葱头'],
+    '花生': ['落花生'],
+    '玉米': ['包谷', '棒子'],
+    '菠菜': ['菠薐'],
+    '芹菜': ['药芹'],
+    '香菜': ['芫荽'],
+    '莴笋': ['莴苣'],
+    '豆腐': ['菽乳'],
+}
+
 # 烹饪时间解析规则
-def parse_cooking_time(time_str):
+def parse_cooking_time(value: Any) -> Optional[int]:
     """
     解析烹饪时间字符串
     支持格式:
-    - "10-30分钟"
-    - "10~30分钟"
-    - "30分钟"
-    - "1小时"
-    - "1.5小时"
+    - "10-30分钟" 返回 30 (取最大值)
+    - "约30分钟" 返回 30
+    - "半小时" 返回 30
+    - "1小时" 返回 60
+    - 无法解析时返回 None
     """
-    import re
+    if not value or value == '':
+        return None
 
-    if not time_str or pd.isna(time_str):
-        return 30  # 默认30分钟
+    time_str = str(value).strip()
 
-    time_str = str(time_str).strip()
-
-    # 匹配 "X分钟" 或 "X分钟" 格式
-    minute_match = re.search(r'(\d+)\s*[分分钟]', time_str)
-    if minute_match:
-        return int(minute_match.group(1))
-
-    # 匹配 "X小时" 格式
+    # 匹配 "X小时" 格式 (先匹配，因为包含数字)
     hour_match = re.search(r'(\d+\.?\d*)\s*[小时h]', time_str)
     if hour_match:
         return int(float(hour_match.group(1)) * 60)
 
-    # 匹配范围 "10-30分钟" 取中间值
+    # 匹配范围 "10-30分钟" 取最大值 (在单个数字前匹配)
     range_match = re.search(r'(\d+)\s*[-~]\s*(\d+)\s*分钟', time_str)
     if range_match:
-        return (int(range_match.group(1)) + int(range_match.group(2))) // 2
+        return int(range_match.group(2))  # 返回最大值
 
-    return 30  # 默认30分钟
+    # 匹配 "X分钟" 或 "约X分钟" 格式
+    minute_match = re.search(r'(?:约)?(\d+)\s*[分分钟]', time_str)
+    if minute_match:
+        return int(minute_match.group(1))
+
+    # 匹配 "半小时"
+    if '半小时' in time_str or '半钟' in time_str:
+        return 30
+
+    # 无法解析
+    return None
 
 # 食材解析函数
 def parse_ingredients(ingredients_str):
