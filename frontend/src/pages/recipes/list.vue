@@ -2,30 +2,48 @@
   <view class="recipes-list-page">
     <!-- 顶部筛选区 -->
     <view class="filter-section">
+      <!-- 体质筛选 -->
       <scroll-view scroll-x class="filter-scroll">
-        <view class="filter-item" :class="{ active: !selectedType }" @click="selectType('')">
-          全部类型
+        <view class="filter-item" :class="{ active: !store.filters.constitution }" @click="selectConstitution('')">
+          全部体质
         </view>
         <view
-          v-for="type in recipeTypes"
-          :key="type.value"
+          v-for="constitution in constitutions"
+          :key="constitution.value"
           class="filter-item"
-          :class="{ active: selectedType === type.value }"
-          @click="selectType(type.value)"
+          :class="{ active: store.filters.constitution === constitution.value }"
+          @click="selectConstitution(constitution.value)"
         >
-          {{ type.label }}
+          {{ constitution.label }}
         </view>
       </scroll-view>
 
+      <!-- 功效筛选 -->
       <scroll-view scroll-x class="filter-scroll">
-        <view class="filter-item" :class="{ active: !selectedDifficulty }" @click="selectDifficulty('')">
+        <view class="filter-item" :class="{ active: !store.filters.efficacy }" @click="selectEfficacy('')">
+          全部功效
+        </view>
+        <view
+          v-for="efficacy in efficacies"
+          :key="efficacy"
+          class="filter-item"
+          :class="{ active: store.filters.efficacy === efficacy }"
+          @click="selectEfficacy(efficacy)"
+        >
+          {{ efficacy }}
+        </view>
+      </scroll-view>
+
+      <!-- 难度筛选 -->
+      <scroll-view scroll-x class="filter-scroll">
+        <view class="filter-item" :class="{ active: !store.filters.difficulty }" @click="selectDifficulty('')">
           全部难度
         </view>
         <view
           v-for="diff in difficulties"
           :key="diff.value"
           class="filter-item"
-          :class="{ active: selectedDifficulty === diff.value }"
+          :class="{ active: store.filters.difficulty === diff.value }"
           @click="selectDifficulty(diff.value)"
         >
           {{ diff.label }}
@@ -33,150 +51,207 @@
       </scroll-view>
     </view>
 
-    <!-- 食谱列表 -->
-    <scroll-view class="recipes-scroll" scroll-y @scrolltolower="loadMore">
-      <view class="recipes-list">
+    <!-- 下拉刷新容器 -->
+    <scroll-view
+      class="recipes-scroll"
+      scroll-y
+      refresher-enabled
+      :refresher-triggered="refreshing"
+      @refresherrefresh="onRefresh"
+      @scrolltolower="onScrollToLower"
+    >
+      <!-- 空状态 -->
+      <view v-if="!store.loading && store.recipes.length === 0" class="empty-state">
+        <text class="empty-icon">🍳</text>
+        <text class="empty-text">暂无菜谱</text>
+      </view>
+
+      <!-- 菜谱列表 -->
+      <view v-else class="recipes-list">
         <view
-          v-for="item in recipes"
+          v-for="item in store.recipes"
           :key="item.id"
           class="recipe-item"
           @click="goToDetail(item.id)"
         >
-          <image v-if="item.image_url" :src="item.image_url" class="recipe-image" mode="aspectFill" />
-          <view v-else class="recipe-image placeholder">🍲</view>
+          <!-- 封面图 (lazy-load) -->
+          <image
+            v-if="item.cover_image"
+            :src="item.cover_image"
+            class="recipe-image"
+            mode="aspectFill"
+            lazy-load
+            @error="onImageError($event, item)"
+          />
+          <view v-else class="recipe-image placeholder">
+            <text class="placeholder-icon">🍲</text>
+          </view>
+
+          <!-- 菜谱信息 -->
           <view class="recipe-info">
             <view class="recipe-name">{{ item.name }}</view>
+            <view v-if="item.description" class="recipe-desc">{{ item.description }}</view>
+
+            <!-- 元信息标签 -->
             <view class="recipe-meta">
-              <text class="tag type">{{ item.type }}</text>
-              <text class="tag difficulty" :class="item.difficulty">{{ item.difficulty }}</text>
-              <text class="time">⏱ {{ item.cook_time }}分钟</text>
+              <!-- 难度标签 -->
+              <text v-if="item.difficulty" class="tag difficulty" :class="getDifficultyClass(item.difficulty)">
+                {{ getDifficultyLabel(item.difficulty) }}
+              </text>
+
+              <!-- 烹饪时间 -->
+              <text v-if="item.cooking_time" class="time">⏱ {{ item.cooking_time }}分钟</text>
+
+              <!-- 热量 -->
+              <text v-if="item.calories" class="calories">🔥 {{ item.calories }}kcal</text>
             </view>
-            <view class="recipe-serving">👤 {{ item.servings }}人份</view>
+
+            <!-- 功效标签 -->
+            <view v-if="item.efficacy_tags && item.efficacy_tags.length > 0" class="recipe-tags">
+              <text
+                v-for="tag in item.efficacy_tags.slice(0, 3)"
+                :key="tag"
+                class="tag efficacy"
+              >
+                {{ tag }}
+              </text>
+            </view>
+
+            <!-- 体质标签 -->
+            <view v-if="item.suitable_constitutions && item.suitable_constitutions.length > 0" class="recipe-constitutions">
+              <text class="constitution-label">适合:</text>
+              <text
+                v-for="c in item.suitable_constitutions.slice(0, 2)"
+                :key="c"
+                class="constitution-tag"
+              >
+                {{ getConstitutionLabel(c) }}
+              </text>
+            </view>
           </view>
         </view>
       </view>
 
       <!-- 加载状态 -->
       <view class="load-more">
-        <text v-if="loading">加载中...</text>
-        <text v-else-if="!hasMore">没有更多了</text>
-        <text v-else @click="loadMore">加载更多</text>
+        <text v-if="store.loading">加载中...</text>
+        <text v-else-if="!store.hasMore">没有更多了</text>
+        <text v-else>上拉加载更多</text>
       </view>
     </scroll-view>
   </view>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
-import { getRecipesList, getRecipeTypes, getRecipeDifficulties } from '@/api/recipes.js'
+import { useRecipesStore } from '@/stores/recipes.js'
+import { getRecipeTypes, getRecipeDifficulties } from '@/api/recipes.js'
 
-// 数据
-const recipes = ref([])
+// Store
+const store = useRecipesStore()
+
+// 筛选选项
 const recipeTypes = ref([])
 const difficulties = ref([])
-const selectedType = ref('')
-const selectedDifficulty = ref('')
-const loading = ref(false)
-const hasMore = ref(true)
-const currentPage = ref(0)
-const pageSize = 20
+const refreshing = ref(false)
 
-// 体质筛选（从URL参数获取）
-const constitutionFilter = ref('')
+// 体质选项
+const constitutions = ref([
+  { value: 'peace', label: '平和质' },
+  { value: 'qi_deficiency', label: '气虚质' },
+  { value: 'yang_deficiency', label: '阳虚质' },
+  { value: 'yin_deficiency', label: '阴虚质' },
+  { value: 'phlegm_damp', label: '痰湿质' },
+  { value: 'damp_heat', label: '湿热质' },
+  { value: 'blood_stasis', label: '血瘀质' },
+  { value: 'qi_depression', label: '气郁质' },
+  { value: 'special', label: '特禀质' }
+])
+
+// 功效选项
+const efficacies = ref(['健脾', '养胃', '补气', '补血', '养阴', '温阳', '化痰', '祛湿', '活血', '疏肝', '安神'])
 
 // 生命周期
 onLoad((options) => {
+  // 从URL参数获取体质筛选
   if (options.constitution) {
-    constitutionFilter.value = options.constitution
+    store.setFilter('constitution', options.constitution)
   }
-  loadData()
 })
 
 onMounted(() => {
   loadFilters()
+  loadData()
 })
 
 // 加载筛选选项
 async function loadFilters() {
   try {
-    const [typeRes, diffRes] = await Promise.all([
-      getRecipeTypes(),
+    const [diffRes] = await Promise.all([
       getRecipeDifficulties()
     ])
-    if (typeRes.code === 0) {
-      recipeTypes.value = typeRes.data
-    }
-    if (diffRes.code === 0) {
-      difficulties.value = diffRes.data
+    if (diffRes) {
+      difficulties.value = diffRes
     }
   } catch (e) {
     console.error('加载筛选选项失败', e)
   }
 }
 
-// 加载食谱列表
+// 加载菜谱列表
 async function loadData(reset = true) {
-  if (loading.value) return
-
-  loading.value = true
-
   try {
-    const params = {
-      skip: reset ? 0 : currentPage.value * pageSize,
-      limit: pageSize
-    }
-
-    if (selectedType.value) {
-      params.type = selectedType.value
-    }
-    if (selectedDifficulty.value) {
-      params.difficulty = selectedDifficulty.value
-    }
-    if (constitutionFilter.value) {
-      params.constitution = constitutionFilter.value
-    }
-
-    const res = await getRecipesList(params)
-
-    if (res.code === 0) {
-      if (reset) {
-        recipes.value = res.data.items
-      } else {
-        recipes.value.push(...res.data.items)
-      }
-      hasMore.value = recipes.value.length < res.data.total
-    }
+    await store.loadRecipes({ reset })
   } catch (e) {
-    console.error('加载食谱列表失败', e)
     uni.showToast({
-      title: '加载失败',
+      title: store.error || '加载失败',
       icon: 'none'
     })
-  } finally {
-    loading.value = false
   }
 }
 
-// 选择类型
-function selectType(value) {
-  selectedType.value = value
-  currentPage.value = 0
+// 下拉刷新
+async function onRefresh() {
+  refreshing.value = true
+  try {
+    await loadData(true)
+  } finally {
+    setTimeout(() => {
+      refreshing.value = false
+    }, 500)
+  }
+}
+
+// 滚动到底部
+function onScrollToLower() {
+  if (!store.loading && store.hasMore) {
+    store.loadMoreRecipes()
+  }
+}
+
+// 选择体质
+function selectConstitution(value) {
+  store.setFilter('constitution', value)
+  loadData(true)
+}
+
+// 选择功效
+function selectEfficacy(value) {
+  store.setFilter('efficacy', value)
   loadData(true)
 }
 
 // 选择难度
 function selectDifficulty(value) {
-  selectedDifficulty.value = value
-  currentPage.value = 0
+  store.setFilter('difficulty', value)
   loadData(true)
 }
 
-// 加载更多
-function loadMore() {
-  if (!hasMore.value || loading.value) return
-  currentPage.value++
-  loadData(false)
+// 图片加载错误
+function onImageError(event, item) {
+  console.log('图片加载失败:', item.cover_image)
+  item.cover_image = ''
 }
 
 // 跳转详情
@@ -184,6 +259,27 @@ function goToDetail(id) {
   uni.navigateTo({
     url: `/pages/recipes/detail?id=${id}`
   })
+}
+
+// 获取难度标签
+function getDifficultyLabel(difficulty) {
+  const map = {
+    easy: '简单',
+    medium: '中等',
+    hard: '困难'
+  }
+  return map[difficulty] || difficulty
+}
+
+// 获取难度样式类
+function getDifficultyClass(difficulty) {
+  return difficulty
+}
+
+// 获取体质标签
+function getConstitutionLabel(code) {
+  const constitution = constitutions.value.find(c => c.value === code)
+  return constitution ? constitution.label : code
 }
 </script>
 
@@ -226,6 +322,24 @@ function goToDetail(id) {
   padding: 20rpx;
 }
 
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 200rpx 0;
+
+  .empty-icon {
+    font-size: 120rpx;
+    margin-bottom: 20rpx;
+  }
+
+  .empty-text {
+    font-size: 32rpx;
+    color: #999;
+  }
+}
+
 .recipes-list {
   display: flex;
   flex-direction: column;
@@ -238,11 +352,12 @@ function goToDetail(id) {
   border-radius: 16rpx;
   padding: 20rpx;
   gap: 20rpx;
+  overflow: hidden;
 }
 
 .recipe-image {
-  width: 180rpx;
-  height: 140rpx;
+  width: 200rpx;
+  height: 200rpx;
   border-radius: 12rpx;
   flex-shrink: 0;
 
@@ -250,8 +365,12 @@ function goToDetail(id) {
     display: flex;
     align-items: center;
     justify-content: center;
-    background: #f0f0f0;
-    font-size: 60rpx;
+    background: linear-gradient(135deg, #f5f7fa 0%, #e4e8eb 100%);
+
+    .placeholder-icon {
+      font-size: 80rpx;
+      opacity: 0.5;
+    }
   }
 }
 
@@ -260,12 +379,26 @@ function goToDetail(id) {
   display: flex;
   flex-direction: column;
   gap: 10rpx;
+  min-width: 0;
 }
 
 .recipe-name {
   font-size: 32rpx;
   font-weight: bold;
   color: #333;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.recipe-desc {
+  font-size: 26rpx;
+  color: #666;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  line-height: 1.5;
 }
 
 .recipe-meta {
@@ -280,30 +413,56 @@ function goToDetail(id) {
   border-radius: 8rpx;
   font-size: 24rpx;
 
-  &.type {
-    background: #e6f7ff;
-    color: #1890ff;
-  }
-
   &.difficulty {
-    &.简单 {
+    &.easy {
       background: #f6ffed;
       color: #52c41a;
     }
-    &.中等 {
+    &.medium {
       background: #fff7e6;
       color: #fa8c16;
     }
-    &.困难 {
+    &.hard {
       background: #fff1f0;
       color: #ff4d4f;
     }
   }
+
+  &.efficacy {
+    background: #f0f5ff;
+    color: #1890ff;
+  }
 }
 
-.time, .recipe-serving {
+.time, .calories {
   font-size: 24rpx;
   color: #999;
+}
+
+.recipe-tags {
+  display: flex;
+  gap: 8rpx;
+  flex-wrap: wrap;
+}
+
+.recipe-constitutions {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+  flex-wrap: wrap;
+
+  .constitution-label {
+    font-size: 24rpx;
+    color: #999;
+  }
+
+  .constitution-tag {
+    padding: 4rpx 12rpx;
+    border-radius: 8rpx;
+    font-size: 24rpx;
+    background: #f0f5ff;
+    color: #1890ff;
+  }
 }
 
 .load-more {
