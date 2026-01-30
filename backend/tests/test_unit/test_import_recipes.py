@@ -13,7 +13,7 @@ import os
 import sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
-from scripts.import_recipes import load_excel, check_recipe_exists, validate_and_link_ingredients
+from scripts.import_recipes import load_excel, check_recipe_exists, validate_and_link_ingredients, import_single_recipe
 
 
 class TestLoadExcel:
@@ -443,4 +443,319 @@ class TestValidateAndLinkIngredients:
         assert len(result) == 1
         assert result[0].ingredient_id == ingredient.id
         assert result[0].amount == ''  # 默认为空字符串
+
+
+class TestImportSingleRecipe:
+    """测试 import_single_recipe 函数"""
+
+    def test_import_single_recipe_success(self, db_session):
+        """测试成功导入单条菜谱"""
+        from api.models import Ingredient, Recipe, RecipeIngredient, RecipeStep
+        import uuid
+
+        # 创建测试食材
+        ingredient1 = Ingredient(
+            id=str(uuid.uuid4()),
+            name="山药",
+            category="谷物",
+            nature="平",
+            flavor="甘"
+        )
+        ingredient2 = Ingredient(
+            id=str(uuid.uuid4()),
+            name="小米",
+            category="谷物",
+            nature="凉",
+            flavor="甘"
+        )
+        db_session.add(ingredient1)
+        db_session.add(ingredient2)
+        db_session.commit()
+
+        # 准备测试数据 - Excel行
+        row = {
+            'title': '山药小米粥',
+            'costtime': '30分钟',
+            'steptext': '1. 将山药洗净切小块\n2. 小米洗净\n3. 锅中加水，放入小米煮30分钟',
+            'QuantityIngredients': '山药50g、小米100g',
+            'desc': '健脾养胃的养生粥',
+            'tip': '小火慢煮口感更好'
+        }
+
+        # 空图片映射
+        image_map = {}
+
+        # 测试导入
+        result = import_single_recipe(row, image_map, db_session, dry_run=False)
+
+        # 验证
+        assert result is not None
+        assert result.name == '山药小米粥'
+        assert result.cooking_time == 30
+        assert result.difficulty == 'easy'  # 30分钟 -> easy
+        assert result.desc == '健脾养胃的养生粥'
+        assert result.tip == '小火慢煮口感更好'
+
+        # 验证食材关联
+        assert len(result.ingredient_relations) == 2
+        # 找到主料
+        main_ingredient = next((r for r in result.ingredient_relations if r.is_main), None)
+        assert main_ingredient is not None
+        assert main_ingredient.amount == '50g'
+
+        # 验证步骤关联
+        assert len(result.step_relations) == 3
+
+        # 验证数据库中的记录
+        db_recipe = db_session.query(Recipe).filter_by(name='山药小米粥').first()
+        assert db_recipe is not None
+        assert db_recipe.name == '山药小米粥'
+
+    def test_import_single_recipe_skip_existing(self, db_session):
+        """测试跳过已存在的菜谱"""
+        from api.models import Recipe
+        import uuid
+
+        # 创建已存在的菜谱
+        existing_recipe = Recipe(
+            id=str(uuid.uuid4()),
+            name="山药小米粥",
+            difficulty="easy",
+            cooking_time=30
+        )
+        db_session.add(existing_recipe)
+        db_session.commit()
+
+        # 准备测试数据
+        row = {
+            'title': '山药小米粥',
+            'costtime': '30分钟',
+            'steptext': '1. 将山药洗净切小块',
+            'QuantityIngredients': '山药50g',
+        }
+
+        image_map = {}
+
+        # 测试导入 - 应该跳过
+        result = import_single_recipe(row, image_map, db_session, dry_run=False)
+
+        # 验证 - 应该返回None（跳过）
+        assert result is None
+
+        # 验证数据库只有一条记录
+        from api.models import Recipe
+        count = db_session.query(Recipe).filter_by(name='山药小米粥').count()
+        assert count == 1
+
+    def test_import_single_recipe_skip_empty_title(self, db_session):
+        """测试跳过标题为空的行"""
+        row = {
+            'title': '',
+            'costtime': '30分钟',
+            'steptext': '1. 步骤',
+            'QuantityIngredients': '食材',
+        }
+
+        image_map = {}
+
+        # 测试导入 - 应该跳过
+        result = import_single_recipe(row, image_map, db_session, dry_run=False)
+
+        # 验证 - 应该返回None（跳过）
+        assert result is None
+
+    def test_import_single_recipe_dry_run(self, db_session):
+        """测试dry-run模式不写入数据库"""
+        from api.models import Recipe
+
+        # 准备测试数据
+        row = {
+            'title': '测试菜谱DRYRUN',
+            'costtime': '30分钟',
+            'steptext': '1. 测试步骤',
+            'QuantityIngredients': '测试食材',
+        }
+
+        image_map = {}
+
+        # 测试dry-run导入
+        result = import_single_recipe(row, image_map, db_session, dry_run=True)
+
+        # 验证 - 返回Recipe对象但不写入数据库
+        assert result is not None
+        assert result.name == '测试菜谱DRYRUN'
+
+        # 验证数据库中没有该记录
+        db_recipe = db_session.query(Recipe).filter_by(name='测试菜谱DRYRUN').first()
+        assert db_recipe is None
+
+    def test_import_single_recipe_parse_difficulty_from_time(self, db_session):
+        """测试从烹饪时间推测难度"""
+        from api.models import Ingredient
+        import uuid
+
+        # 创建测试食材
+        ingredient = Ingredient(
+            id=str(uuid.uuid4()),
+            name="山药",
+            category="谷物",
+            nature="平",
+            flavor="甘"
+        )
+        db_session.add(ingredient)
+        db_session.commit()
+
+        # 测试不同烹饪时间推测难度
+        test_cases = [
+            ('20分钟', 'easy'),
+            ('45分钟', 'medium'),
+            ('90分钟', 'hard'),
+        ]
+
+        for time_str, expected_difficulty in test_cases:
+            row = {
+                'title': f'测试菜谱{time_str}',
+                'costtime': time_str,
+                'steptext': '1. 步骤',
+                'QuantityIngredients': '山药50g',
+            }
+
+            image_map = {}
+
+            result = import_single_recipe(row, image_map, db_session, dry_run=True)
+
+            assert result is not None
+            assert result.difficulty == expected_difficulty, f"时间 {time_str} 应该推测为 {expected_difficulty}"
+
+    def test_import_single_recipe_guess_tags(self, db_session):
+        """测试智能推测标签"""
+        from api.models import Ingredient
+        import uuid
+
+        # 创建测试食材 - 山药（健脾、养胃、补气）
+        ingredient = Ingredient(
+            id=str(uuid.uuid4()),
+            name="山药",
+            category="谷物",
+            nature="平",
+            flavor="甘"
+        )
+        db_session.add(ingredient)
+        db_session.commit()
+
+        row = {
+            'title': '山药粥',
+            'costtime': '30分钟',
+            'steptext': '1. 煮粥',
+            'QuantityIngredients': '山药50g',
+        }
+
+        image_map = {}
+
+        result = import_single_recipe(row, image_map, db_session, dry_run=True)
+
+        assert result is not None
+        # 山药应该推测出健脾、养胃、补气等功效
+        assert len(result.efficacy_tags) > 0
+        # 山药适合气虚质和平和质
+        assert len(result.suitable_constitutions) > 0
+
+    def test_import_single_recipe_with_image_match(self, db_session):
+        """测试图片匹配"""
+        from api.models import Ingredient
+        import uuid
+
+        # 创建测试食材
+        ingredient = Ingredient(
+            id=str(uuid.uuid4()),
+            name="山药",
+            category="谷物",
+            nature="平",
+            flavor="甘"
+        )
+        db_session.add(ingredient)
+        db_session.commit()
+
+        # 准备图片映射
+        image_map = {
+            '山药小米粥': '/path/to/山药小米粥.jpg'
+        }
+
+        row = {
+            'title': '山药小米粥',
+            'costtime': '30分钟',
+            'steptext': '1. 煮粥',
+            'QuantityIngredients': '山药50g',
+        }
+
+        result = import_single_recipe(row, image_map, db_session, dry_run=True)
+
+        assert result is not None
+        # 应该匹配到图片
+        assert result.cover_image == '/path/to/山药小米粥.jpg'
+
+    def test_import_single_recipe_parse_steps(self, db_session):
+        """测试步骤解析"""
+        from api.models import Ingredient
+        import uuid
+
+        # 创建测试食材
+        ingredient = Ingredient(
+            id=str(uuid.uuid4()),
+            name="山药",
+            category="谷物",
+            nature="平",
+            flavor="甘"
+        )
+        db_session.add(ingredient)
+        db_session.commit()
+
+        row = {
+            'title': '山药小米粥',
+            'costtime': '30分钟',
+            'steptext': '1. 将山药洗净切小块（约5分钟）\n2. 小米洗净\n3. 锅中加水，放入小米煮30分钟（约30分钟）',
+            'QuantityIngredients': '山药50g',
+        }
+
+        image_map = {}
+
+        result = import_single_recipe(row, image_map, db_session, dry_run=True)
+
+        assert result is not None
+        # 应该解析出3个步骤
+        assert len(result.step_relations) == 3
+        # 第一个步骤应该有时间（5分钟）
+        assert result.step_relations[0].duration == 5
+
+    def test_import_single_recipe_skip_missing_ingredients(self, db_session):
+        """测试跳过不存在的食材"""
+        from api.models import Ingredient
+        import uuid
+
+        # 创建一个测试食材
+        ingredient = Ingredient(
+            id=str(uuid.uuid4()),
+            name="山药",
+            category="谷物",
+            nature="平",
+            flavor="甘"
+        )
+        db_session.add(ingredient)
+        db_session.commit()
+
+        # 使用包含不存在食材的数据
+        row = {
+            'title': '山药粥',
+            'costtime': '30分钟',
+            'steptext': '1. 煮粥',
+            'QuantityIngredients': '山药50g、不存在的食材100g',
+        }
+
+        image_map = {}
+
+        result = import_single_recipe(row, image_map, db_session, dry_run=True)
+
+        assert result is not None
+        # 应该只关联一个存在的食材
+        assert len(result.ingredient_relations) == 1
 

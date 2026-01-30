@@ -19,7 +19,7 @@ from sqlalchemy.orm import Session
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from api.database import SessionLocal
-from api.models import Recipe, Ingredient, RecipeIngredient
+from api.models import Recipe, Ingredient, RecipeIngredient, RecipeStep
 
 # 配置日志
 logging.basicConfig(
@@ -193,6 +193,152 @@ def validate_and_link_ingredients(parsed_ingredients: List[Dict[str, Any]], db: 
     return ingredient_relations
 
 
+def import_single_recipe(row: Dict[str, Any], image_map: Dict[str, str], db: Session, dry_run: bool) -> Optional[Recipe]:
+    """
+    导入单条菜谱
+    将Excel行数据转为数据库记录
+
+    步骤1: check_recipe_exists() 检查是否存在
+    步骤2: 解析字段 (cooking_time, difficulty, tags)
+    步骤3: 智能推测 (constitutions, efficacy, solar_terms)
+    步骤4: 解析食材和步骤
+    步骤5: validate_and_link_ingredients() 验证食材
+    步骤6: match_recipe_image() 匹配图片
+    步骤7: 创建Recipe对象并设置所有字段
+    步骤8: 添加到db.session (dry_run=False时)
+
+    Args:
+        row: Excel行数据 (pandas Series或Dict)
+        image_map: 图片文件名映射字典
+        db: 数据库会话
+        dry_run: 是否为模拟运行
+
+    Returns:
+        创建的Recipe对象，失败或跳过时返回None
+    """
+    from scripts.recipe_import_config import (
+        COLUMN_MAPPING,
+        parse_cooking_time,
+        parse_difficulty,
+        parse_tags,
+        guess_constitutions,
+        guess_efficacy_tags,
+        guess_solar_terms,
+        parse_ingredients,
+        parse_steps,
+        match_recipe_image,
+        CONSTITUTION_MAP
+    )
+    import uuid
+
+    # 步骤1: 检查菜谱是否已存在
+    recipe_name = row.get('title')
+    if not recipe_name:
+        logger.warning("菜谱名称为空，跳过")
+        return None
+
+    if check_recipe_exists(recipe_name, db):
+        return None  # 已存在，跳过
+
+    logger.info(f"开始导入菜谱: {recipe_name}")
+
+    try:
+        # 步骤2: 解析基本字段
+        # 解析烹饪时间
+        cooking_time_str = row.get('costtime')
+        cooking_time = parse_cooking_time(cooking_time_str)
+
+        # 解析难度
+        difficulty_value = row.get('difficulty')
+        difficulty = parse_difficulty(difficulty_value, cooking_time)
+
+        # 步骤3: 智能推测字段
+        # 解析食材列表（用于智能推测）
+        ingredients_text = row.get('QuantityIngredients', '')
+        parsed_ingredients = parse_ingredients(ingredients_text)
+        ingredient_names = [ing['name'] for ing in parsed_ingredients]
+
+        # 解析步骤文本（用于提取功效）
+        steps_text = row.get('steptext', '')
+
+        # 智能推测功效标签
+        efficacy_tags = guess_efficacy_tags(ingredient_names)
+
+        # 智能推测体质
+        suitable_constitutions = guess_constitutions(ingredient_names, efficacy_tags, db)
+
+        # 智能推测节气
+        solar_terms = guess_solar_terms(ingredient_names, efficacy_tags)
+
+        # 步骤4: 解析食材和步骤
+        # 食材已在步骤3中解析
+
+        # 解析步骤
+        parsed_steps = parse_steps(steps_text)
+
+        # 步骤5: 验证并关联食材
+        ingredient_relations = validate_and_link_ingredients(parsed_ingredients, db)
+
+        # 步骤6: 匹配图片
+        cover_image = match_recipe_image(recipe_name, image_map)
+        if cover_image:
+            logger.info(f"匹配到图片: {cover_image}")
+        else:
+            logger.info(f"未找到匹配的图片")
+
+        # 步骤7: 创建Recipe对象
+        recipe = Recipe(
+            id=str(uuid.uuid4()),
+            name=recipe_name,
+            description=row.get('description', row.get('desc', '')),
+            desc=row.get('desc', ''),
+            tip=row.get('tip', ''),
+            cover_image=cover_image or '',
+            cooking_time=cooking_time,
+            difficulty=difficulty,
+            suitable_constitutions=suitable_constitutions,
+            avoid_constitutions=[],  # 暂时为空，后续可扩展
+            efficacy_tags=efficacy_tags,
+            solar_terms=solar_terms,
+            ingredients={'parsed': parsed_ingredients},  # 存储原始解析数据
+            steps={'parsed': parsed_steps},  # 存储原始解析数据
+            is_published=True,
+            view_count=0
+        )
+
+        # 添加食材关联
+        for relation in ingredient_relations:
+            relation.recipe_id = recipe.id
+            recipe.ingredient_relations.append(relation)
+
+        # 添加步骤关联
+        for step_data in parsed_steps:
+            step = RecipeStep(
+                id=str(uuid.uuid4()),
+                recipe_id=recipe.id,
+                step_number=step_data.get('step_number', 0),
+                description=step_data.get('description', ''),
+                image_url=step_data.get('image_url', ''),
+                duration=step_data.get('duration')
+            )
+            recipe.step_relations.append(step)
+
+        # 步骤8: 添加到数据库
+        if not dry_run:
+            db.add(recipe)
+            db.commit()
+            logger.info(f"成功导入菜谱: {recipe_name} (ID: {recipe.id})")
+        else:
+            logger.info(f"[DRY-RUN] 菜谱导入成功: {recipe_name}")
+
+        return recipe
+
+    except Exception as e:
+        logger.error(f"导入菜谱失败: {recipe_name} - {e}")
+        db.rollback()
+        return None
+
+
 def main():
     """主函数 - 导入脚本入口"""
     parser = argparse.ArgumentParser(
@@ -236,7 +382,7 @@ def main():
     # US-017: ✅ 加载Excel文件
     # US-018: ✅ 检查菜谱是否存在
     # US-019: ✅ 验证和关联食材
-    # US-020: 单条导入逻辑
+    # US-020: ✅ 单条导入逻辑
     # US-021: 批量导入逻辑
 
     try:
