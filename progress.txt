@@ -1,0 +1,17 @@
+# Ralph Progress Log
+Started: Thu, Jan 30, 2026 10:30:00 AM
+---
+
+## Codebase Patterns
+- This project uses custom migration scripts instead of Alembic (see backend/migrations/)
+- Migration scripts are located in backend/migrations/ and follow pattern migrate_*.py
+- Each migration script includes path setup: sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+- SQLite requires explicit ADD COLUMN for missing columns (cannot auto-add)
+- Use `ALTER TABLE table_name ADD COLUMN column_name TYPE` for adding columns to existing tables
+- Foreign key constraints are checked with PRAGMA foreign_key_check in SQLite
+- **UUID strings are used for primary keys throughout the codebase**
+- The Recipe model uses 'ingredient_relations' and 'step_relations' for back_populates to avoid conflict with JSON 'ingredients' and 'steps' fields
+- JSON columns are supported but searching has limitations in SQLite
+- Use CREATE TABLE IF NOT EXISTS and CREATE INDEX IF NOT EXISTS for idempotency
+
+---

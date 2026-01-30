@@ -1,0 +1,734 @@
+{
+  "project": "中医养生菜谱功能 (Excel导入版)",
+  "branchName": "ralph/tcm-recipes-excel-import",
+  "description": "从Excel导入12,784条菜谱数据到数据库，包含图片自动匹配和智能字段推测功能。提供菜谱浏览、搜索、筛选API及前端页面。",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "创建 Recipe 数据模型",
+      "description": "作为后端开发者，我需要创建 Recipe 数据模型，以便于存储菜谱基本信息",
+      "acceptanceCriteria": [
+        "在 backend/api/models/__init__.py 中添加 Recipe 模型",
+        "包含字段: id, name (String(200), indexed), description (Text), desc (Text, 个人体验), tip (Text, 烹饪贴士)",
+        "包含字段: cover_image (String(500)), cooking_time (Integer, 分钟), difficulty (String(20): easy/medium/hard)",
+        "包含中医属性: suitable_constitutions (JSON), avoid_constitutions (JSON), efficacy_tags (JSON), solar_terms (JSON)",
+        "包含营养: calories (Integer), protein (Float), fat (Float), carbs (Float)",
+        "包含元数据: is_published (Boolean, default=True), view_count (Integer, default=0), created_at, updated_at",
+        "包含关系: ingredients (relationship to RecipeIngredient), steps (relationship to RecipeStep)",
+        "Typecheck passes"
+      ],
+      "priority": 1,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-002",
+      "title": "创建 RecipeIngredient 关联表模型",
+      "description": "作为后端开发者，我需要创建 RecipeIngredient 关联表模型，以便于管理菜谱与食材的关联",
+      "acceptanceCriteria": [
+        "在 backend/api/models/__init__.py 中添加 RecipeIngredient 模型",
+        "包含字段: id, recipe_id (FK to recipes), ingredient_id (FK to ingredients)",
+        "包含字段: amount (String(50), 如'100g'), is_main (Boolean, default=False), display_order (Integer, default=0)",
+        "添加唯一约束: UniqueConstraint(recipe_id, ingredient_id)",
+        "添加关系: recipe (back_populates='ingredients'), ingredient",
+        "Typecheck passes"
+      ],
+      "priority": 2,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-003",
+      "title": "创建 RecipeStep 关联表模型",
+      "description": "作为后端开发者，我需要创建 RecipeStep 关联表模型，以便于存储菜谱制作步骤",
+      "acceptanceCriteria": [
+        "在 backend/api/models/__init__.py 中添加 RecipeStep 模型",
+        "包含字段: id, recipe_id (FK to recipes), step_number (Integer), description (Text)",
+        "包含字段: image_url (String(500)), duration (Integer, 该步骤分钟数)",
+        "添加关系: recipe (back_populates='steps')",
+        "Typecheck passes"
+      ],
+      "priority": 3,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-004",
+      "title": "生成数据库迁移并创建表",
+      "description": "作为后端开发者，我需要创建数据库迁移脚本并执行，以便于创建所有菜谱相关表",
+      "acceptanceCriteria": [
+        "创建 backend/migrations/migrate_recipes.py 迁移脚本",
+        "使用项目自定义迁移模式（非Alembic）: sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))",
+        "创建 recipes 表，包含所有字段和索引",
+        "创建 recipe_ingredients 表，包含外键和唯一约束",
+        "创建 recipe_steps 表，包含外键和索引",
+        "验证表创建成功: 使用 SQLAlchemy inspect 检查表存在",
+        "验证索引创建: recipes.name 索引存在",
+        "验证外键约束: PRAGMA foreign_key_check 通过",
+        "运行迁移后测试通过",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 4,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-005",
+      "title": "创建 Excel 导入配置文件和基础映射",
+      "description": "作为后端开发者，我需要创建 Excel 导入配置文件，以便于定义字段映射和常量",
+      "acceptanceCriteria": [
+        "创建 backend/scripts/recipe_import_config.py 文件",
+        "定义 COLUMN_MAPPING: {'title': 'name', 'costtime': 'cooking_time', 'steptext': 'steps_text', 'QuantityIngredients': 'ingredients_text'}",
+        "定义 DIFFICULTY_MAP: {'简单': 'easy', '中等': 'medium', '困难': 'hard'}",
+        "定义 CONSTITUTION_MAP: 体质中文名到代码的映射",
+        "定义 EFFICACY_TAGS 列表: ['健脾', '养胃', '补气', '补血', '养阴', '温阳', '化痰', '祛湿', '活血', '疏肝', '安神']",
+        "定义 SOLAR_TERMS: 节气标签列表",
+        "定义 FOOD_SYNONYMS: 食材同义词字典如 {'西红柿': ['番茄', '洋柿子']}",
+        "Typecheck passes"
+      ],
+      "priority": 5,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-006",
+      "title": "实现 parse_cooking_time 时间解析函数",
+      "description": "作为后端开发者，我需要实现烹饪时间解析函数，以便于将Excel时间字符串转为分钟数",
+      "acceptanceCriteria": [
+        "在 recipe_import_config.py 中添加 parse_cooking_time(value: str) -> Optional[int]",
+        "支持格式 '10-30分钟' 返回 30 (取最大值)",
+        "支持格式 '约30分钟' 返回 30",
+        "支持格式 '半小时' 返回 30, '1小时' 返回 60",
+        "无法解析时返回 None",
+        "添加单元测试覆盖所有格式",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 6,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-007",
+      "title": "实现 parse_difficulty 难度解析函数",
+      "description": "作为后端开发者，我需要实现难度解析和推测函数，以便于自动填充difficulty字段",
+      "acceptanceCriteria": [
+        "在 recipe_import_config.py 中添加 parse_difficulty(value: Any, cooking_time: Optional[int]) -> str",
+        "如果value是中文('简单'/'中等'/'困难')，映射为'easy'/'medium'/'hard'",
+        "如果value已经是代码，直接返回",
+        "如果value为None且cooking_time不为None，根据时间推测: ≤30→easy, 31-60→medium, >60→hard",
+        "都为None时默认返回'medium'",
+        "添加单元测试验证所有分支",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 7,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-008",
+      "title": "实现 parse_tags 通用标签解析函数",
+      "description": "作为后端开发者，我需要实现标签解析通用函数，以便于解析逗号/顿号分隔的标签",
+      "acceptanceCriteria": [
+        "在 recipe_import_config.py 中添加 parse_tags(value: Any, mapping: Optional[Dict]=None) -> List[str]",
+        "value为None返回空列表",
+        "按逗号、顿号(、)、换行符分隔字符串",
+        "去除首尾空格，过滤空字符串",
+        "提供mapping时将标签转换为代码",
+        "返回标签列表",
+        "添加单元测试验证所有分隔符",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 8,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-009",
+      "title": "实现 guess_constitutions 体质智能推测",
+      "description": "作为后端开发者，我需要实现适合体质的智能推测，以便于自动填充suitable_constitutions",
+      "acceptanceCriteria": [
+        "在 recipe_import_config.py 中添加 guess_constitutions(ingredients: List[str], efficacy: List[str], db: Session) -> List[str]",
+        "根据食材名称查询ingredients表获取性味(nature/taste)",
+        "性味规则: 温性→yang_deficiency, 凉性→yin_deficiency, 平性→peace",
+        "功效关键词: '补气'→qi_deficiency, '健脾'→qi_deficiency+peace",
+        "返回去重的体质代码列表",
+        "添加单元测试验证推测逻辑",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 9,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-010",
+      "title": "实现 guess_efficacy_tags 功效智能推测",
+      "description": "作为后端开发者，我需要实现功效标签智能推测，以便于自动填充efficacy_tags",
+      "acceptanceCriteria": [
+        "在 recipe_import_config.py 中添加 guess_efficacy_tags(ingredients: List[str]) -> List[str]",
+        "定义 FOOD_EFFICACY_MAP 字典: 食材到功效的映射",
+        "根据食材性味推测: 甘味→健脾, 苦味→清热, 辛味→发散",
+        "返回去重的功效标签列表，最多5个",
+        "添加单元测试验证推测逻辑",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 10,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-011",
+      "title": "实现 guess_solar_terms 节气智能推测",
+      "description": "作为后端开发者，我需要实现节气标签智能推测，以便于自动填充solar_terms",
+      "acceptanceCriteria": [
+        "在 recipe_import_config.py 中添加 guess_solar_terms(ingredients: List[str], efficacy: List[str]) -> List[str]",
+        "定义 FOOD_SEASON_MAP 字典: 食材到季节的映射",
+        "根据食材时令推测: 春季食材→['春季'], 夏季食材→['夏季']",
+        "根据功效匹配: '清热'→['夏季'], '温补'→['冬季']",
+        "返回去重的节气标签列表",
+        "添加单元测试验证推测逻辑",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 11,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-012",
+      "title": "实现 parse_ingredients 食材解析函数",
+      "description": "作为后端开发者，我需要实现食材解析函数，以便于解析Excel中的食材用量字段",
+      "acceptanceCriteria": [
+        "在 recipe_import_config.py 中添加 parse_ingredients(value: str) -> List[Dict]",
+        "支持分隔符: 顿号、逗号、换行",
+        "解析格式: '山药50g' → {'name': '山药', 'amount': '50g'}",
+        "解析格式: '枸杞 20克' → {'name': '枸杞', 'amount': '20克'}",
+        "使用正则: ([\\u4e00-\\u9fa5]+)\\s*([\\d\\.]+\\s*[克g个ml斤两]*)",
+        "添加单元测试验证解析格式",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 12,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-013",
+      "title": "实现 parse_steps 步骤解析函数",
+      "description": "作为后端开发者，我需要实现制作步骤解析函数，以便于解析Excel中的步骤文本",
+      "acceptanceCriteria": [
+        "在 recipe_import_config.py 中添加 parse_steps(value: str) -> List[Dict]",
+        "支持分隔符: # 或换行",
+        "提取步骤编号: '1.'、'2.'、'步骤1:'、'第一步:'",
+        "使用正则匹配步骤编号",
+        "返回格式: [{'step_number': 1, 'description': '...', 'duration': None}]",
+        "可选解析时间: '（约5分钟）' → duration=5",
+        "添加单元测试验证解析格式",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 13,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-014",
+      "title": "实现 scan_dish_images 图片扫描功能",
+      "description": "作为后端开发者，我需要实现图片目录扫描，以便于建立图片文件名映射",
+      "acceptanceCriteria": [
+        "在 recipe_import_config.py 中添加 scan_dish_images(image_dir: str) -> Dict[str, str]",
+        "扫描 source_data/dishes_images/ 目录",
+        "支持格式: .jpg, .jpeg, .png, .webp (不区分大小写)",
+        "返回: {'山药小米粥': '/full/path/山药小米粥.jpg', ...}",
+        "文件名键转为小写并去除扩展名",
+        "使用 os.walk 递归扫描",
+        "记录日志: 扫描总数、成功、失败",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 14,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-015",
+      "title": "实现 match_recipe_image 图片模糊匹配",
+      "description": "作为后端开发者，我需要实现菜谱名称到图片的模糊匹配，以便于自动关联图片",
+      "acceptanceCriteria": [
+        "在 recipe_import_config.py 中添加 match_recipe_image(recipe_name: str, image_map: Dict[str, str]) -> Optional[str]",
+        "步骤1: 精确匹配 (去除空格后直接匹配)",
+        "步骤2: 标准化匹配 (统一空格、下划线、括号)",
+        "步骤3: 同义词匹配 (使用 FOOD_SYNONYMS 替换)",
+        "步骤4: 包含匹配 (recipe_name包含image_key或反之)",
+        "匹配成功返回图片完整路径，失败返回None",
+        "记录日志: 匹配类型 (精确/标准化/同义词/包含/失败)",
+        "添加单元测试覆盖所有场景",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 15,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-016",
+      "title": "创建导入脚本主结构和参数解析",
+      "description": "作为后端开发者，我需要创建Excel导入脚本主文件，以便于执行数据导入",
+      "acceptanceCriteria": [
+        "创建 backend/scripts/import_recipes.py 文件",
+        "添加 shebang: #!/usr/bin/env python3 和编码: # -*- coding: utf-8 -*-",
+        "使用 argparse 解析参数: --file (必需), --dry-run (可选), --limit (可选)",
+        "定义 ImportStats 类: total, success, skipped, failed, errors",
+        "实现 main() 函数作为入口",
+        "实现 print_summary() 打印统计",
+        "配置日志: logging.basicConfig(level=logging.INFO)",
+        "Typecheck passes"
+      ],
+      "priority": 16,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-017",
+      "title": "实现 Excel 文件读取和验证",
+      "description": "作为后端开发者，我需要实现Excel文件读取功能，以便于解析菜谱数据",
+      "acceptanceCriteria": [
+        "在 import_recipes.py 中添加 load_excel(file_path: str) -> DataFrame",
+        "使用 pandas.read_excel() 读取文件",
+        "验证必需列存在: title, steptext, QuantityIngredients, costtime",
+        "缺失列时抛出ValueError并列出缺失列名",
+        "过滤title为空的行",
+        "返回DataFrame",
+        "添加单元测试验证读取和验证",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 17,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-018",
+      "title": "实现 check_recipe_exists 去重检查",
+      "description": "作为后端开发者，我需要实现菜谱存在检查，以便于跳过已存在的菜谱",
+      "acceptanceCriteria": [
+        "在 import_recipes.py 中添加 check_recipe_exists(name: str, db: Session) -> bool",
+        "查询: db.query(Recipe).filter_by(name=name).first()",
+        "找到记录返回True，否则返回False",
+        "记录日志: '跳过已存在: {name}'",
+        "添加单元测试验证查询",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 18,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-019",
+      "title": "实现 validate_and_link_ingredients 食材验证关联",
+      "description": "作为后端开发者，我需要实现食材验证和关联，以便于正确关联食材数据",
+      "acceptanceCriteria": [
+        "在 import_recipes.py 中添加 validate_and_link_ingredients(parsed_ingredients: List[Dict], db: Session) -> List[RecipeIngredient]",
+        "遍历解析后的食材列表",
+        "查询ingredients表: db.query(Ingredient).filter_by(name=ingredient_name).first()",
+        "食材不存在时记录警告并跳过",
+        "食材存在时创建RecipeIngredient对象，第一个设is_main=True",
+        "返回RecipeIngredient对象列表",
+        "添加单元测试验证关联逻辑",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 19,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-020",
+      "title": "实现 import_single_recipe 单条导入逻辑",
+      "description": "作为后端开发者，我需要实现单条菜谱导入逻辑，以便于将Excel行转为数据库记录",
+      "acceptanceCriteria": [
+        "在 import_recipes.py 中添加 import_single_recipe(row: Dict, image_map: Dict, db: Session, dry_run: bool) -> Optional[Recipe]",
+        "步骤1: check_recipe_exists() 检查是否存在",
+        "步骤2: 解析字段 (cooking_time, difficulty, tags)",
+        "步骤3: 智能推测 (constitutions, efficacy, solar_terms)",
+        "步骤4: 解析食材和步骤",
+        "步骤5: validate_and_link_ingredients() 验证食材",
+        "步骤6: match_recipe_image() 匹配图片",
+        "步骤7: 创建Recipe对象并设置所有字段",
+        "步骤8: 添加到db.session (dry_run=False时)",
+        "异常处理: 捕获错误记录到stats.errors",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 20,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-021",
+      "title": "实现 import_recipes_batch 批量导入",
+      "description": "作为后端开发者，我需要实现批量导入逻辑，以便于高效导入大量数据",
+      "acceptanceCriteria": [
+        "在 import_recipes.py 中添加 import_recipes_batch(df: DataFrame, limit: Optional[int], db: Session, dry_run: bool) -> ImportStats",
+        "扫描图片目录: image_map = scan_dish_images()",
+        "遍历DataFrame (limit限制数量)",
+        "每10条输出进度，每100条提交一次事务",
+        "调用 import_single_recipe() 导入单条",
+        "更新stats: success/skipped/failed",
+        "完成后提交剩余事务",
+        "异常时回滚: db.session.rollback()",
+        "返回ImportStats",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 21,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-022",
+      "title": "测试 Excel 导入功能",
+      "description": "作为后端开发者，我需要测试Excel导入功能，以便于确保导入正确",
+      "acceptanceCriteria": [
+        "运行 --dry-run --limit 5 验证输出但不写入",
+        "验证解析正确: 菜谱名、时间、难度",
+        "验证食材解析: 山药50g → 2条记录",
+        "验证步骤解析: 支持#和换行",
+        "验证图片匹配: cover_image字段有值",
+        "验证智能推测: difficulty、体质、功效、节气",
+        "验证统计信息: total, success, skipped, failed",
+        "检查日志输出清晰",
+        "Tests pass"
+      ],
+      "priority": 22,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-023",
+      "title": "正式导入数据到数据库",
+      "description": "作为数据管理员，我需要执行完整导入，以便于将所有菜谱数据导入数据库",
+      "acceptanceCriteria": [
+        "运行: cd backend && python scripts/import_recipes.py --file ../source_data/dishes_list.xlsx",
+        "观察导入进度 (每10条显示)",
+        "查看统计摘要 (total, success, skipped, failed)",
+        "验证数据库菜谱数量 > 12000",
+        "验证desc和tip字段存在",
+        "验证失败数量 < 100",
+        "验证食材关联率 > 80%",
+        "验证图片匹配率 > 30%",
+        "SQL抽样检查10条菜谱完整数据",
+        "执行外键约束检查",
+        "Tests pass"
+      ],
+      "priority": 23,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-024",
+      "title": "创建 RecipeService 类和基础方法",
+      "description": "作为后端开发者，我需要创建RecipeService类，以便于封装菜谱业务逻辑",
+      "acceptanceCriteria": [
+        "创建 backend/api/services/recipe_service.py",
+        "创建RecipeService类 (无状态)",
+        "实现 get_recipe_by_id(recipe_id: int, db: Session) -> Optional[Dict]",
+        "使用joinedload eager load ingredients和steps",
+        "返回包含ingredients(含nature/taste)、steps、desc、tip的完整字典",
+        "不存在返回None",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 24,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-025",
+      "title": "实现 get_recipes 列表查询方法",
+      "description": "作为后端开发者，我需要实现获取菜谱列表方法，以便于支持筛选和分页",
+      "acceptanceCriteria": [
+        "实现 get_recipes(filters: Dict, page: int, page_size: int, db: Session) -> Dict",
+        "构建基础查询并应用筛选: constitution(contains), efficacy(contains), solar_term(contains), difficulty(==), max_cooking_time(<=)",
+        "计算总数并应用分页",
+        "支持排序: created_at_desc, view_count_desc, cooking_time_asc",
+        "返回: {total, page, page_size, items: List[Dict]}",
+        "默认 page_size=20, page=1",
+        "添加单元测试验证筛选分页",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 25,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-026",
+      "title": "实现 search_recipes 搜索方法",
+      "description": "作为后端开发者，我需要实现搜索菜谱方法，以便于用户可以搜索",
+      "acceptanceCriteria": [
+        "实现 search_recipes(keyword: str, page: int, page_size: int, db: Session) -> Dict",
+        "构建查询: outerjoin(RecipeIngredient, Ingredient)",
+        "搜索范围: Recipe.name(LIKE), Ingredient.name(LIKE), efficacy_tags(contains)",
+        "使用or_组合条件，distinct()去重",
+        "支持分页，返回格式与get_recipes相同",
+        "keyword为空返回空列表",
+        "添加单元测试验证搜索",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 26,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-027",
+      "title": "实现 get_recommendations 推荐方法",
+      "description": "作为后端开发者，我需要实现推荐菜谱方法，以便于用户获取个性化推荐",
+      "acceptanceCriteria": [
+        "实现 get_recommendations(recommend_type: str, params: Dict, limit: int, db: Session) -> Dict",
+        "验证recommend_type in ['constitution', 'solar_term', 'efficacy']",
+        "constitution: 查询suitable_constitutions contains",
+        "solar_term: 查询solar_terms contains",
+        "efficacy: 查询efficacy_tags contains",
+        "按created_at倒序，应用limit",
+        "生成recommendation_reason",
+        "返回: {type, recommendation_reason, items}",
+        "添加单元测试验证三种类型",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 27,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-028",
+      "title": "编写 RecipeService 单元测试",
+      "description": "作为后端开发者，我需要编写RecipeService单元测试，以便于确保功能正确",
+      "acceptanceCriteria": [
+        "创建 backend/tests/test_unit/test_recipes.py",
+        "创建TestRecipeService测试类",
+        "测试get_recipe_by_id成功/失败/含食材/含步骤/含desc_tip",
+        "测试get_recipes无筛选/分页/各种筛选条件/排序",
+        "测试search_recipes按名/食材/功效/分页/空关键字",
+        "测试get_recommendations三种类型/无效类型/limit",
+        "使用db_session fixture，测试后自动回滚",
+        "覆盖率 >= 90%",
+        "Tests pass"
+      ],
+      "priority": 28,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-029",
+      "title": "创建 GET /api/recipes 端点",
+      "description": "作为后端开发者，我需要创建获取菜谱列表的API端点",
+      "acceptanceCriteria": [
+        "创建 backend/api/routers/recipes.py",
+        "添加get_db dependency",
+        "添加GET /api/recipes端点",
+        "查询参数: page, page_size, constitution, efficacy, solar_term, difficulty, max_cooking_time, sort_by",
+        "使用Pydantic RequestOptionalParams验证",
+        "不需要认证",
+        "调用RecipeService().get_recipes()",
+        "返回标准格式: {code: 0, data: {...}}",
+        "参数无效返回400",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 29,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-030",
+      "title": "创建 GET /api/recipes/{id} 端点",
+      "description": "作为后端开发者，我需要创建获取菜谱详情的API端点",
+      "acceptanceCriteria": [
+        "添加GET /api/recipes/{id}端点",
+        "路径参数: id (int, >0)",
+        "不存在返回404: {code: -1, message: '菜谱不存在'}",
+        "调用RecipeService().get_recipe_by_id()",
+        "返回含desc、tip、ingredients(含nature/taste)、steps的数据",
+        "返回标准格式: {code: 0, data: {...}}",
+        "添加单元测试验证成功和失败",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 30,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-031",
+      "title": "创建 GET /api/recipes/search 和 /recommend 端点",
+      "description": "作为后端开发者，我需要创建搜索和推荐的API端点",
+      "acceptanceCriteria": [
+        "添加GET /api/recipes/search端点: keyword, page, page_size参数",
+        "添加GET /api/recipes/recommend端点: type, constitution/solar_term/efficacy, limit参数",
+        "都不需要认证",
+        "调用对应service方法",
+        "返回标准格式",
+        "无效type返回400",
+        "添加单元测试验证功能",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 31,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-032",
+      "title": "注册 recipes 路由",
+      "description": "作为后端开发者，我需要注册recipes路由，以便于API可访问",
+      "acceptanceCriteria": [
+        "在backend/main.py中导入recipes路由",
+        "使用app.include_router()注册: prefix='/api', tags=['recipes']",
+        "验证所有端点可通过正确路径访问",
+        "验证/docs页面显示recipes API文档",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 32,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-033",
+      "title": "编写 Recipes API 集成测试",
+      "description": "作为后端开发者，我需要编写Recipes API集成测试，以便于确保API正常工作",
+      "acceptanceCriteria": [
+        "创建backend/tests/test_api/test_recipes_api.py",
+        "使用TestClient和db_session fixture",
+        "测试get_recipes成功/筛选/分页/无效参数",
+        "测试get_recipe_detail成功/404",
+        "测试search_recipes成功/空结果",
+        "测试get_recommendations成功/无效类型",
+        "所有测试通过，覆盖率 >= 85%",
+        "Tests pass"
+      ],
+      "priority": 33,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-034",
+      "title": "创建前端 recipes API 客户端",
+      "description": "作为前端开发者，我需要创建recipes API客户端，以便于前端调用后端接口",
+      "acceptanceCriteria": [
+        "创建frontend/src/api/recipes.js",
+        "导出getRecipes(params): GET /api/recipes",
+        "导出getRecipeDetail(id): GET /api/recipes/{id}",
+        "导出searchRecipes(keyword, params): GET /api/recipes/search",
+        "导出getRecommendations(type, params): GET /api/recipes/recommend",
+        "处理标准响应: if (res.code === 0) return res.data",
+        "使用uni.request，BASE_URL从config导入",
+        "统一错误处理，添加JSDoc注释",
+        "Typecheck passes"
+      ],
+      "priority": 34,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-035",
+      "title": "创建 recipes Pinia store",
+      "description": "作为前端开发者，我需要创建recipes状态管理，以便于管理菜谱相关状态",
+      "acceptanceCriteria": [
+        "创建frontend/src/stores/recipes.js",
+        "使用defineStore创建'recipes' store",
+        "state: recipes, currentRecipe, filters, pagination",
+        "getters: hasMore (page*page_size < total)",
+        "actions: loadRecipes, loadMoreRecipes, loadRecipeDetail, searchRecipes, loadRecommendations",
+        "actions: setFilter, resetFilters",
+        "Typecheck passes"
+      ],
+      "priority": 35,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-036",
+      "title": "创建菜谱列表页面",
+      "description": "作为前端开发者，我需要创建菜谱列表页面，以便于用户浏览菜谱",
+      "acceptanceCriteria": [
+        "创建frontend/src/pages/recipes/list.vue",
+        "使用<script setup>和composition API",
+        "导入useRecipesStore，onMounted时loadRecipes()",
+        "显示菜谱卡片: 封面图、名称、描述、难度、时间、功效标签",
+        "封面图lazy-load，@error显示占位图",
+        "支持下拉刷新和上拉加载更多",
+        "点击卡片跳转详情页",
+        "显示空状态和加载中",
+        "Typecheck passes",
+        "必须调用 Playwright MCP 完成所有界面相关测试"
+      ],
+      "priority": 36,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-037",
+      "title": "创建菜谱详情页面",
+      "description": "作为前端开发者，我需要创建菜谱详情页面，以便于用户查看完整信息",
+      "acceptanceCriteria": [
+        "创建frontend/src/pages/recipes/detail.vue",
+        "onLoad获取id，调用loadRecipeDetail()",
+        "显示封面图(可预览)、基本信息、desc区域(蓝色背景)、适合/禁忌体质",
+        "显示食材列表(主料高亮)、制作步骤(编号圆圈)、tip区域(黄色背景)",
+        "显示相关菜谱推荐",
+        "图片加载失败显示占位图",
+        "Typecheck passes",
+        "必须调用 Playwright MCP 完成所有界面相关测试"
+      ],
+      "priority": 37,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-038",
+      "title": "创建菜谱搜索筛选页面",
+      "description": "作为前端开发者，我需要创建搜索筛选页面，以便于用户搜索筛选菜谱",
+      "acceptanceCriteria": [
+        "创建frontend/src/pages/recipes/search.vue",
+        "顶部搜索框支持@confirm搜索",
+        "筛选器区域: 体质、功效、节气、难度、烹饪时间",
+        "显示搜索结果列表(复用卡片组件)",
+        "清除筛选按钮",
+        "无结果提示",
+        "支持组合筛选",
+        "Typecheck passes",
+        "必须调用 Playwright MCP 完成所有界面相关测试"
+      ],
+      "priority": 38,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-039",
+      "title": "配置菜谱页面路由",
+      "description": "作为前端开发者，我需要配置菜谱页面路由，以便于用户访问",
+      "acceptanceCriteria": [
+        "在frontend/src/pages.json中添加配置",
+        "list.vue: path 'pages/recipes/list', title '菜谱'",
+        "detail.vue: path 'pages/recipes/detail', title '菜谱详情'",
+        "search.vue: path 'pages/recipes/search', title '搜索菜谱'",
+        "验证路由可正常跳转",
+        "Typecheck passes",
+        "必须调用 Playwright MCP 完成所有界面相关测试"
+      ],
+      "priority": 39,
+      "passes": false,
+      "notes": ""
+    }
+  ]
+}
