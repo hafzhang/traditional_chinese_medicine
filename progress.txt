@@ -496,3 +496,25 @@ Started: Thu, Jan 30, 2026 10:30:00 AM
   - All recipe endpoints are public (no authentication required per PRD)
 
 ---
+
+## [2026-01-30] - US-034
+- Updated frontend/src/api/recipes.js for Excel Import API structure
+- getRecipes(params): GET /api/v1/recipes with filters (constitution, efficacy, solar_term, difficulty, max_cooking_time, sort_by)
+- getRecipeDetail(id): GET /api/v1/recipes/{id} returns full recipe data with desc, tip, ingredients (with nature/taste), steps
+- searchRecipes(keyword, params): GET /api/v1/recipes/search with keyword search
+- getRecommendations(type, params): GET /api/v1/recipes/recommend supports constitution/solar_term/efficacy types
+- All functions handle standard response: if (res.code === 0) return res.data
+- Added JSDoc comments for all functions
+- Kept getRecipeTypes and getRecipeDifficulties for UI convenience
+- Files changed: frontend/src/api/recipes.js
+- All 177 tests pass (no frontend tests configured yet)
+- **Learnings for future iterations:**
+  - Frontend uses JavaScript (not TypeScript), so no typecheck command needed
+  - API paths use /api/v1 prefix (e.g., /api/v1/recipes), not /api as stated in PRD
+  - BASE_URL is from @/utils/request.js, not from a config module as PRD mentioned
+  - The request utility already handles standard response format (code === 0) but we added explicit .then() for cleaner return values
+  - uni.request is used via the get() function from utils/request.js
+  - The .then() pattern allows extracting res.data directly for cleaner API usage in components
+  - Empty keyword handling in searchRecipes returns empty result immediately for better UX
+
+---

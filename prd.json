@@ -636,8 +636,8 @@
         "Typecheck passes"
       ],
       "priority": 34,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Updated frontend/src/api/recipes.js for Excel Import API structure. Note: API paths use /api/v1 prefix (e.g., /api/v1/recipes) not /api as stated in PRD. BASE_URL is from @/utils/request.js not config."
     },
     {
       "id": "US-035",
