@@ -650,3 +650,30 @@ Started: Thu, Jan 30, 2026 10:30:00 AM
   - Mobile Chrome uses Pixel 5 device emulation for mobile viewport testing
 
 ---
+
+## [2026-01-30] - US-043
+- Created frontend/tests/e2e/recipes/02-list.spec.ts
+- Implemented 9 test cases covering all acceptance criteria:
+  1. should display page elements correctly - verifies filter section, constitution/efficacy/difficulty filters
+  2. should display constitution filter options - checks for 平和质, 气虚质, 阳虚质
+  3. should display recipe list with cards - handles both empty state and populated list
+  4. should filter recipes by constitution - tests clicking 气虚质 filter
+  5. should filter recipes by difficulty - tests clicking 简单 filter
+  6. should navigate to detail page when recipe card is clicked - verifies URL change
+  7. should support pull-to-refresh - verifies scroll view exists with refresher
+  8. should display recipe card with correct information - checks image, name, desc, tags
+  9. should display constitution and efficacy tags on recipe cards - verifies tag display
+- All 18 tests pass (9 test cases x 2 projects: chromium, Mobile Chrome)
+- Tests use waitForSelector with 15s timeout for recipe loading
+- Tests handle both empty state (no recipes) and populated list scenarios gracefully
+- Files changed: frontend/tests/e2e/recipes/02-list.spec.ts, prd.json, progress.txt
+- **Learnings for future iterations:**
+  - Tests should handle both empty state and populated data scenarios
+  - Use optional chaining with catch() for elements that may not exist: await element.isVisible({ timeout: 5000 }).catch(() => false)
+  - Filter items have .active class when selected - can be verified with toHaveClass(/active/)
+  - Recipe list URL pattern: /#/pages/recipes/list (includes hash)
+  - Empty state shows 🍳 icon and "暂无菜谱" text
+  - Constitution label is "适合:" in recipe cards
+  - Pull-to-refresh gesture testing is complex - verify element attributes instead
+
+---
