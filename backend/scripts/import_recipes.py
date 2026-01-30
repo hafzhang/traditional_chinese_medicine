@@ -376,7 +376,11 @@ def import_recipes_batch(
 
     # 扫描图片目录
     logger.info("扫描图片目录...")
-    image_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'source_data', 'dishes_images')
+    # Get project root: scripts/ -> backend/ -> project root
+    scripts_dir = os.path.dirname(os.path.abspath(__file__))
+    backend_dir = os.path.dirname(scripts_dir)
+    project_root = os.path.dirname(backend_dir)
+    image_dir = os.path.join(project_root, 'source_data', 'dishes_images')
     image_map = scan_dish_images(image_dir)
     logger.info(f"图片扫描完成，找到 {len(image_map)} 张图片")
 
