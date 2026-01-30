@@ -153,10 +153,30 @@ class RecipeService:
             query = query.filter(Recipe.suitable_constitutions.contains(filters["constitution"]))
 
         if "efficacy" in filters and filters["efficacy"]:
-            query = query.filter(Recipe.efficacy_tags.contains(filters["efficacy"]))
+            # For JSON columns in SQLite, use LIKE for better compatibility
+            # SQLAlchemy stores Chinese characters as Unicode escapes: \uXXXX
+            import json
+            efficacy = filters["efficacy"]
+            unicode_escaped = json.dumps(efficacy)
+            unicode_pattern = unicode_escaped.strip('"')
+            query = query.filter(
+                (Recipe.efficacy_tags.like(f'%{unicode_pattern}%')) |
+                (Recipe.efficacy_tags.like(f'%"{efficacy}"%')) |
+                (Recipe.efficacy_tags.like(f'%{efficacy}%'))
+            )
 
         if "solar_term" in filters and filters["solar_term"]:
-            query = query.filter(Recipe.solar_terms.contains(filters["solar_term"]))
+            # For JSON columns in SQLite, use LIKE for better compatibility
+            # SQLAlchemy stores Chinese characters as Unicode escapes: \uXXXX
+            import json
+            solar_term = filters["solar_term"]
+            unicode_escaped = json.dumps(solar_term)
+            unicode_pattern = unicode_escaped.strip('"')
+            query = query.filter(
+                (Recipe.solar_terms.like(f'%{unicode_pattern}%')) |
+                (Recipe.solar_terms.like(f'%"{solar_term}"%')) |
+                (Recipe.solar_terms.like(f'%{solar_term}%'))
+            )
 
         if "difficulty" in filters and filters["difficulty"]:
             query = query.filter(Recipe.difficulty == filters["difficulty"])
