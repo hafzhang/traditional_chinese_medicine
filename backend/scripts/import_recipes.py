@@ -11,6 +11,8 @@ import sys
 from pathlib import Path
 from typing import Optional, Dict, Any, List
 
+import pandas as pd
+
 # 配置日志
 logging.basicConfig(
     level=logging.INFO,
@@ -60,6 +62,53 @@ def print_summary(stats: ImportStats):
             logger.info(f"  ... 还有 {len(stats.errors) - 10} 条错误")
 
 
+def load_excel(file_path: str) -> pd.DataFrame:
+    """
+    加载并验证 Excel 文件
+    使用 pandas.read_excel() 读取文件
+    验证必需列存在: title, steptext, QuantityIngredients, costtime
+    缺失列时抛出 ValueError 并列出缺失列名
+    过滤 title 为空的行
+    返回 DataFrame
+    """
+    logger.info(f"正在读取 Excel 文件: {file_path}")
+
+    # 检查文件是否存在
+    path = Path(file_path)
+    if not path.exists():
+        raise FileNotFoundError(f"Excel 文件不存在: {file_path}")
+
+    # 读取 Excel 文件
+    try:
+        df = pd.read_excel(file_path)
+    except Exception as e:
+        raise ValueError(f"读取 Excel 文件失败: {e}")
+
+    logger.info(f"读取成功，共 {len(df)} 行数据")
+
+    # 验证必需列
+    required_columns = ['title', 'steptext', 'QuantityIngredients', 'costtime']
+    missing_columns = [col for col in required_columns if col not in df.columns]
+
+    if missing_columns:
+        raise ValueError(
+            f"Excel 文件缺少必需的列: {', '.join(missing_columns)}\n"
+            f"当前列: {', '.join(df.columns.tolist())}"
+        )
+
+    # 过滤 title 为空的行
+    original_count = len(df)
+    df = df[df['title'].notna() & (df['title'].astype(str).str.strip() != '')]
+    filtered_count = original_count - len(df)
+
+    if filtered_count > 0:
+        logger.warning(f"过滤掉 {filtered_count} 行 title 为空的数据")
+
+    logger.info(f"验证通过，有效数据 {len(df)} 行")
+
+    return df
+
+
 def main():
     """主函数 - 导入脚本入口"""
     parser = argparse.ArgumentParser(
@@ -100,16 +149,23 @@ def main():
         logger.info(f"限制数量: {args.limit}")
 
     # TODO: 后续用户故事将实现完整的导入逻辑
-    # US-017: 加载Excel文件
+    # US-017: ✅ 加载Excel文件
     # US-018: 检查菜谱是否存在
     # US-019: 验证和关联食材
     # US-020: 单条导入逻辑
     # US-021: 批量导入逻辑
 
-    stats = ImportStats()
-    stats.total = 0
+    try:
+        # US-017: 加载 Excel 文件
+        df = load_excel(args.file)
+        stats = ImportStats()
+        stats.total = len(df)
+        logger.info(f"Excel 文件加载成功，共 {stats.total} 条菜谱数据")
+    except Exception as e:
+        logger.error(f"加载 Excel 文件失败: {e}")
+        stats = ImportStats()
+        stats.failed = 1
 
-    logger.info("脚本结构已创建，等待后续实现...")
     print_summary(stats)
 
 

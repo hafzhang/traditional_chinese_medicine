@@ -49,6 +49,8 @@ Started: Thu, Jan 30, 2026 10:30:00 AM
 - The Recipe model uses 'ingredient_relations' and 'step_relations' for back_populates to avoid conflict with JSON 'ingredients' and 'steps' fields
 - JSON columns are supported but searching has limitations in SQLite
 - Use CREATE TABLE IF NOT EXISTS and CREATE INDEX IF NOT EXISTS for idempotency
+- When testing file operations, use tempfile.NamedTemporaryFile for test file creation and cleanup in finally blocks
+- When adding pandas imports for Excel reading, place imports at top level after standard library imports
 
 ---
 
@@ -156,5 +158,31 @@ Started: Thu, Jan 30, 2026 10:30:00 AM
   - guess_constitutions has optional db parameter for future enhancement
   - Regex character class [分分钟] matches only '分' or '钟', not both - use (?:分|钟|分钟) for alternation
   - Use raw strings r""" for docstrings containing backslash sequences
+
+---
+
+## [2026-01-30] - US-017
+- Implemented load_excel function in backend/scripts/import_recipes.py
+- Added pandas import for Excel file reading
+- Validates required columns: title, steptext, QuantityIngredients, costtime
+- Raises ValueError with missing column names when columns are missing
+- Filters rows where title is empty, None, or whitespace-only
+- Returns pandas DataFrame
+- Created 7 unit tests in tests/test_unit/test_import_recipes.py:
+  - test_load_excel_success: Validates successful reading
+  - test_load_excel_missing_required_columns: Tests ValueError with missing columns
+  - test_load_excel_filter_empty_titles: Tests filtering of empty titles
+  - test_load_excel_file_not_found: Tests FileNotFoundError
+  - test_load_excel_invalid_file: Tests ValueError for non-Excel files
+  - test_load_excel_empty_file: Tests empty file handling
+  - test_load_excel_extra_columns_allowed: Tests that extra columns don't break reading
+- All 7 tests pass, plus all 109 existing Phase 1 tests still pass (116 total)
+- Typecheck passes
+- Files changed: backend/scripts/import_recipes.py, backend/tests/test_unit/test_import_recipes.py
+- **Learnings for future iterations:**
+  - When testing file operations, use tempfile.NamedTemporaryFile with delete=False and cleanup in finally block
+  - pandas filtering: df[df['column'].notna() & (df['column'].astype(str).str.strip() != '')] removes None and empty strings
+  - The load_excel function is now integrated into main() and loads the Excel file on script startup
+  - All tests are in tests/test_unit/test_import_recipes.py, which uses sys.path.insert to import from scripts directory
 
 ---
