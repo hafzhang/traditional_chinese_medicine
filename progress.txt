@@ -518,3 +518,24 @@ Started: Thu, Jan 30, 2026 10:30:00 AM
   - Empty keyword handling in searchRecipes returns empty result immediately for better UX
 
 ---
+
+## [2026-01-30] - US-035
+- Created frontend/src/stores/recipes.js with Pinia store for recipe state management
+- State includes: recipes array, currentRecipe, filters object, pagination, loading flag, error message
+- Getters: hasMore (page*page_size < total), hasFilters (checks if any filters are active)
+- Actions: loadRecipes (with reset option), loadMoreRecipes, loadRecipeDetail, searchRecipes, loadRecommendations
+- Actions: setFilter, resetFilters, resetPagination, clearCurrentRecipe
+- Integrates with recipesApi from @/api/recipes.js
+- Proper error handling with try/catch and loading state management
+- Filters are automatically cleaned (empty/null/undefined values removed) before API calls
+- Files changed: frontend/src/stores/recipes.js
+- **Learnings for future iterations:**
+  - Pinia is already configured in main.js with createPinia()
+  - The stores directory didn't exist yet - needed to create it
+  - Store uses defineStore with options API (state, getters, actions) for clarity
+  - The reset parameter in loadRecipes allows both full refresh and append more modes
+  - Filter values need to be cleaned before API calls to avoid sending empty strings
+  - Loading state is managed per-action for better UX feedback
+  - The store pattern keeps API calls separate from components, following separation of concerns
+
+---
