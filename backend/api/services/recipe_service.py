@@ -1,16 +1,16 @@
 """
 Recipe Service
-食谱服务层 - Phase 1
+食谱服务层 - Phase 1 + Excel Import
 """
 
 from typing import List, Dict, Any, Optional
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
-from api.models import Recipe
+from api.models import Recipe, RecipeIngredient, RecipeStep, Ingredient
 
 
 class RecipeService:
-    """食谱服务类"""
+    """食谱服务类 (无状态)"""
 
     # 有效的体质代码
     VALID_CONSTITUTIONS = {
@@ -24,21 +24,103 @@ class RecipeService:
     # 难度级别
     DIFFICULTY_LEVELS = ["简单", "中等", "困难"]
 
-    def get_recipe_by_id(self, recipe_id: str, db: Session) -> Optional[Recipe]:
+    def _get_recipe_entity_by_id(self, recipe_id: str, db: Session) -> Optional[Recipe]:
         """
-        根据ID获取食谱详情
+        内部方法：根据ID获取Recipe实体对象
 
         Args:
             recipe_id: 食谱ID
             db: 数据库会话
 
         Returns:
-            食谱对象或None
+            Recipe对象或None
         """
         return db.query(Recipe).filter(
             Recipe.id == recipe_id,
             Recipe.is_deleted == False
         ).first()
+
+    def get_recipe_by_id(self, recipe_id: str, db: Session) -> Optional[Dict[str, Any]]:
+        """
+        根据ID获取食谱详情 (返回字典格式)
+
+        Args:
+            recipe_id: 食谱ID
+            db: 数据库会话
+
+        Returns:
+            包含ingredients(含nature/taste)、steps、desc、tip的完整字典，不存在返回None
+        """
+        recipe = db.query(Recipe).options(
+            joinedload(Recipe.ingredient_relations).joinedload(RecipeIngredient.ingredient),
+            joinedload(Recipe.step_relations)
+        ).filter(
+            Recipe.id == recipe_id,
+            Recipe.is_deleted == False
+        ).first()
+
+        if not recipe:
+            return None
+
+        # Build ingredients list with nature/taste
+        ingredients_data = []
+        for rel in recipe.ingredient_relations:
+            ingredient_info = {
+                "name": rel.ingredient.name if rel.ingredient else rel.amount,
+                "amount": rel.amount,
+                "is_main": rel.is_main
+            }
+            if rel.ingredient:
+                ingredient_info["nature"] = rel.ingredient.nature
+                ingredient_info["taste"] = rel.ingredient.flavor
+            ingredients_data.append(ingredient_info)
+
+        # Build steps list
+        steps_data = []
+        for step in recipe.step_relations:
+            steps_data.append({
+                "step_number": step.step_number,
+                "description": step.description,
+                "image_url": step.image_url,
+                "duration": step.duration
+            })
+
+        return {
+            "id": recipe.id,
+            "name": recipe.name,
+            "type": recipe.type,
+            "difficulty": recipe.difficulty,
+            "cooking_time": recipe.cooking_time or recipe.cook_time,
+            "description": recipe.description,
+            "desc": recipe.desc,
+            "tip": recipe.tip,
+            "cover_image": recipe.cover_image or recipe.image_url,
+            "suitable_constitutions": recipe.suitable_constitutions,
+            "avoid_constitutions": recipe.avoid_constitutions,
+            "efficacy_tags": recipe.efficacy_tags,
+            "solar_terms": recipe.solar_terms,
+            "ingredients": ingredients_data,
+            "steps": steps_data,
+            "calories": recipe.calories,
+            "protein": recipe.protein,
+            "fat": recipe.fat,
+            "carbs": recipe.carbs or recipe.carbohydrates,
+            "view_count": recipe.view_count,
+            "created_at": recipe.created_at.isoformat() if recipe.created_at else None
+        }
+
+    def get_recipe_object(self, recipe_id: str, db: Session) -> Optional[Recipe]:
+        """
+        根据ID获取Recipe对象 (Phase 1 兼容方法)
+
+        Args:
+            recipe_id: 食谱ID
+            db: 数据库会话
+
+        Returns:
+            Recipe对象或None
+        """
+        return self._get_recipe_entity_by_id(recipe_id, db)
 
     def get_recipes_list(
         self,
@@ -222,7 +304,7 @@ class RecipeService:
         Returns:
             是否成功
         """
-        recipe = self.get_recipe_by_id(recipe_id, db)
+        recipe = self._get_recipe_entity_by_id(recipe_id, db)
         if recipe:
             recipe.view_count = (recipe.view_count or 0) + 1
             db.commit()

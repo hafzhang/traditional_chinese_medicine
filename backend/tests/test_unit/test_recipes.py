@@ -12,7 +12,7 @@ class TestRecipeService:
     """食谱服务单元测试"""
 
     def test_get_recipe_by_id(self, db_session):
-        """测试根据ID获取食谱"""
+        """测试根据ID获取食谱 (返回字典格式)"""
         recipe = Recipe(
             id="test-recipe-001",
             name="山药莲子粥",
@@ -30,10 +30,11 @@ class TestRecipeService:
         service = RecipeService()
         result = service.get_recipe_by_id("test-recipe-001", db_session)
 
+        # get_recipe_by_id 现在返回字典
         assert result is not None
-        assert result.name == "山药莲子粥"
-        assert result.type == "粥类"
-        assert result.difficulty == "简单"
+        assert result["name"] == "山药莲子粥"
+        assert result["type"] == "粥类"
+        assert result["difficulty"] == "简单"
 
     def test_get_recipes_by_constitution(self, db_session):
         """测试根据体质获取食谱"""

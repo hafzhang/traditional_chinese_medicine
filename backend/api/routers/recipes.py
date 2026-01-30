@@ -99,29 +99,11 @@ async def get_recipe_detail(
     # 增加浏览次数
     recipe_service.increment_view_count(recipe_id, db)
 
+    # get_recipe_by_id now returns a dict with all fields
     return {
         "code": 0,
         "message": "success",
-        "data": {
-            "id": recipe.id,
-            "name": recipe.name,
-            "type": recipe.type,
-            "difficulty": recipe.difficulty,
-            "cook_time": recipe.cook_time,
-            "servings": recipe.servings,
-            "suitable_constitutions": recipe.suitable_constitutions,
-            "symptoms": recipe.symptoms,
-            "suitable_seasons": recipe.suitable_seasons,
-            "ingredients": recipe.ingredients,
-            "steps": recipe.steps,
-            "efficacy": recipe.efficacy,
-            "health_benefits": recipe.health_benefits,
-            "precautions": recipe.precautions,
-            "tags": recipe.tags,
-            "image_url": recipe.image_url,
-            "description": recipe.description,
-            "view_count": recipe.view_count
-        }
+        "data": recipe
     }
 
 

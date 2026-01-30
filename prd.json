@@ -446,8 +446,8 @@
         "Tests pass"
       ],
       "priority": 24,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Updated get_recipe_by_id to return dict format with joinedload for ingredients/steps. Added _get_recipe_entity_by_id for internal use. Updated router and tests. All 141 tests pass."
     },
     {
       "id": "US-025",

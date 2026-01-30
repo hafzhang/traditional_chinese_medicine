@@ -366,3 +366,26 @@ Started: Thu, Jan 30, 2026 10:30:00 AM
   - stats.total uses min(len(df), limit) when limit is provided to correctly report total items
 
 ---
+
+## [2026-01-30] - US-024
+- Updated RecipeService.get_recipe_by_id to return Dict instead of Recipe object
+- Added joinedload for eager loading ingredient_relations and step_relations
+- Built ingredients list with nature/taste fields from Ingredient model
+- Built steps list with step_number, description, image_url, duration
+- Returned dict includes: id, name, type, difficulty, cooking_time, description, desc, tip, cover_image, suitable_constitutions, avoid_constitutions, efficacy_tags, solar_terms, ingredients, steps, calories, protein, fat, carbs, view_count, created_at
+- Added _get_recipe_entity_by_id internal method for retrieving Recipe object
+- Added get_recipe_object method for Phase 1 compatibility
+- Updated increment_view_count to use _get_recipe_entity_by_id
+- Updated recipes router to return dict data directly
+- Updated test_recipes.py to work with dict return type (result["name"] instead of result.name)
+- All 141 tests pass
+- Files changed: backend/api/services/recipe_service.py, backend/api/routers/recipes.py, backend/tests/test_unit/test_recipes.py, prd.json, progress.txt
+- **Learnings for future iterations:**
+  - When changing service method return types (ORM object -> Dict), need to update all callers (router, other service methods, tests)
+  - Use joinedload for eager loading relationships to avoid N+1 query problems
+  - For backward compatibility, can keep both old method (returning ORM object) and new method (returning Dict)
+  - The recipe_id parameter type is str (UUID), not int as stated in PRD - this is correct for UUID primary keys
+  - Dict return type is cleaner for API responses as it avoids serialization issues with SQLAlchemy objects
+  - The PRD recipe_id type is int but actual implementation uses str (UUID) - this is fine as UUID strings are the standard in this codebase
+
+---
