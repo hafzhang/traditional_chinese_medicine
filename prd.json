@@ -407,8 +407,8 @@
         "Tests pass"
       ],
       "priority": 22,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Fixed image directory path calculation. Dry-run mode tested successfully with 5 recipes. All 141 tests pass. 4,998 images scanned from correct directory."
     },
     {
       "id": "US-023",

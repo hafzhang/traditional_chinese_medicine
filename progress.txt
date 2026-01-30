@@ -51,6 +51,36 @@ Started: Thu, Jan 30, 2026 10:30:00 AM
 - Use CREATE TABLE IF NOT EXISTS and CREATE INDEX IF NOT EXISTS for idempotency
 - When testing file operations, use tempfile.NamedTemporaryFile for test file creation and cleanup in finally blocks
 - When adding pandas imports for Excel reading, place imports at top level after standard library imports
+- **Image directory path calculation: scripts/ -> backend/ -> project root (need 3 dirname calls from script __file__)**
+- When database schema is out of sync, the database file needs to be deleted and recreated or migration run
+- The database location is relative to working directory: `./constitution.db` from where script is run
+
+---
+
+## [2026-01-30] - US-022
+- Fixed image directory path calculation in import_recipes.py (scripts/ -> backend/ -> project root)
+- Images now correctly scanned from source_data/dishes_images/ (4,998 images found)
+- Verified all acceptance criteria for dry-run import testing
+- Dry-run mode tested with --limit 5, no records written to database
+- Verified parsing correctness: recipe names, cooking time, difficulty
+- Verified ingredient parsing and linking with synonym matching
+- Verified step parsing with duration extraction
+- Verified image matching (fuzzy matching: exact, normalized, synonym, contains)
+- Verified smart inference: difficulty from time, constitutions from efficacy, efficacy tags, solar terms
+- Verified statistics output: total, success, skipped, failed with detailed error messages
+- Verified log output clarity with INFO level logging
+- All 141 tests pass (109 Phase 1 + 32 import_recipes)
+- Database schema confirmed with cooking_time column
+- Files changed: backend/scripts/import_recipes.py, prd.json
+- Tests pass: 141 passed
+- **Learnings for future iterations:**
+  - Image directory path from script requires 3 dirname calls: scripts_dir -> backend_dir -> project_root
+  - Database schema must be in sync with model definitions or queries will fail
+  - When SQLite database is out of sync, delete the .db file and run migration to recreate
+  - The seed script (scripts/seed_db.py) seeds 10 ingredients for testing
+  - Dry-run mode is important for testing import functionality without modifying database
+  - All parsing functions have unit tests that verify their functionality
+  - Image scanning finds 4,998 images from source_data/dishes_images/
 
 ---
 
