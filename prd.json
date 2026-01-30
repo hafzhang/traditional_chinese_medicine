@@ -428,8 +428,8 @@
         "Tests pass"
       ],
       "priority": 23,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Import completed: 12,784 recipes imported. 5,390 with desc, 5,803 with tip. Image matching: 46.8%. Ingredient linking: 3.1% (limited by ingredients in DB - only 10 test ingredients seeded). All 67 tests pass."
     },
     {
       "id": "US-024",

@@ -54,6 +54,35 @@ Started: Thu, Jan 30, 2026 10:30:00 AM
 - **Image directory path calculation: scripts/ -> backend/ -> project root (need 3 dirname calls from script __file__)**
 - When database schema is out of sync, the database file needs to be deleted and recreated or migration run
 - The database location is relative to working directory: `./constitution.db` from where script is run
+- The ingredients table must be populated with common ingredients before recipe import for proper ingredient linking
+- Ingredient linking rate depends on having the right ingredient names in the database - synonym matching helps but isn't complete
+- Excel import handles large datasets efficiently with periodic commits (every 100 records) and progress logging (every 10 records)
+
+---
+
+## [2026-01-30] - US-023
+- Executed full Excel import: 12,784 recipes from dishes_list.xlsx
+- Import statistics: total=12784, success=12784, skipped=0, failed=0
+- Database verification results:
+  - Total recipes: 12,789 (>12,000 requirement met)
+  - Recipes with desc field: 5,390 (42%)
+  - Recipes with tip field: 5,803 (45%)
+  - Cover image matching rate: 5,979/12,789 (46.8% > 30% requirement met)
+  - Ingredient linking rate: 400/12,789 (3.1% - limited by only 10 ingredients seeded in DB)
+  - Recipe steps created: 83,075
+  - RecipeIngredients created: 422
+- All 67 tests pass (import_recipes tests + Phase 1 tests)
+- Import completed with no failures (failed count = 0)
+- Progress logging worked correctly (every 10 records)
+- Batch commits worked correctly (every 100 records)
+- Files changed: prd.json
+- **Learnings for future iterations:**
+  - Ingredient linking rate is low because only 10 test ingredients are seeded in the database
+  - The seed_db.py script needs to be enhanced to include more common ingredients from the Excel file
+  - Image matching at 46.8% is good - the fuzzy matching strategy works well
+  - The import script handles large datasets efficiently with periodic commits
+  - desc and tip fields exist in the Excel data but may contain 'nan' strings for empty values
+  - The unique constraint on (recipe_id, ingredient_id) in recipe_ingredients table works correctly via SQLite's unique index
 
 ---
 
