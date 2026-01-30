@@ -19,7 +19,7 @@ from sqlalchemy.orm import Session
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from api.database import SessionLocal
-from api.models import Recipe
+from api.models import Recipe, Ingredient, RecipeIngredient
 
 # 配置日志
 logging.basicConfig(
@@ -131,6 +131,68 @@ def check_recipe_exists(name: str, db: Session) -> bool:
     return False
 
 
+def validate_and_link_ingredients(parsed_ingredients: List[Dict[str, Any]], db: Session) -> List[RecipeIngredient]:
+    """
+    验证并关联食材
+    遍历解析后的食材列表，查询ingredients表验证食材是否存在
+    食材不存在时记录警告并跳过
+    食材存在时创建RecipeIngredient对象，第一个设is_main=True
+    返回RecipeIngredient对象列表
+
+    Args:
+        parsed_ingredients: 解析后的食材列表，格式: [{'name': '山药', 'amount': '50g'}, ...]
+        db: 数据库会话
+
+    Returns:
+        RecipeIngredient对象列表
+    """
+    from scripts.recipe_import_config import FOOD_SYNONYMS
+
+    ingredient_relations = []
+
+    for idx, parsed_ingredient in enumerate(parsed_ingredients):
+        ingredient_name = parsed_ingredient.get('name')
+        amount = parsed_ingredient.get('amount', '')
+
+        if not ingredient_name:
+            logger.warning(f"食材名称为空，跳过: {parsed_ingredient}")
+            continue
+
+        # 查询食材表
+        ingredient = db.query(Ingredient).filter_by(name=ingredient_name).first()
+
+        # 如果直接查询没找到，尝试用同义词查找
+        if ingredient is None:
+            # 遍历同义词字典，查找是否有匹配
+            for standard_name, synonyms in FOOD_SYNONYMS.items():
+                if ingredient_name in synonyms:
+                    ingredient = db.query(Ingredient).filter_by(name=standard_name).first()
+                    if ingredient:
+                        logger.info(f"使用同义词匹配: '{ingredient_name}' -> '{standard_name}'")
+                        break
+
+        # 如果食材不存在，跳过
+        if ingredient is None:
+            logger.warning(f"食材不存在，跳过: {ingredient_name}")
+            continue
+
+        # 创建RecipeIngredient对象
+        # 第一个食材设为主料
+        is_main = (idx == 0)
+
+        ingredient_relation = RecipeIngredient(
+            ingredient_id=ingredient.id,
+            amount=amount,
+            is_main=is_main,
+            display_order=idx
+        )
+
+        ingredient_relations.append(ingredient_relation)
+        logger.info(f"关联食材: {ingredient_name} ({amount}) - {'主料' if is_main else '配料'}")
+
+    return ingredient_relations
+
+
 def main():
     """主函数 - 导入脚本入口"""
     parser = argparse.ArgumentParser(
@@ -173,7 +235,7 @@ def main():
     # TODO: 后续用户故事将实现完整的导入逻辑
     # US-017: ✅ 加载Excel文件
     # US-018: ✅ 检查菜谱是否存在
-    # US-019: 验证和关联食材
+    # US-019: ✅ 验证和关联食材
     # US-020: 单条导入逻辑
     # US-021: 批量导入逻辑
 

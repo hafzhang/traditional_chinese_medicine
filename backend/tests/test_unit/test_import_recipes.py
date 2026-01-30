@@ -13,7 +13,7 @@ import os
 import sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
-from scripts.import_recipes import load_excel, check_recipe_exists
+from scripts.import_recipes import load_excel, check_recipe_exists, validate_and_link_ingredients
 
 
 class TestLoadExcel:
@@ -266,4 +266,181 @@ class TestCheckRecipeExists:
         assert check_recipe_exists("山药小米粥", db_session) is True
         assert check_recipe_exists("西红柿炒蛋", db_session) is True
         assert check_recipe_exists("不存在的菜谱", db_session) is False
+
+
+class TestValidateAndLinkIngredients:
+    """测试 validate_and_link_ingredients 函数"""
+
+    def test_validate_and_link_ingredients_success(self, db_session):
+        """测试成功验证和关联食材"""
+        from api.models import Ingredient
+        import uuid
+
+        # 创建测试食材
+        ingredient1 = Ingredient(
+            id=str(uuid.uuid4()),
+            name="山药",
+            category="谷物",
+            nature="平",
+            flavor="甘"
+        )
+        ingredient2 = Ingredient(
+            id=str(uuid.uuid4()),
+            name="小米",
+            category="谷物",
+            nature="凉",
+            flavor="甘"
+        )
+        db_session.add(ingredient1)
+        db_session.add(ingredient2)
+        db_session.commit()
+
+        # 解析后的食材列表
+        parsed_ingredients = [
+            {'name': '山药', 'amount': '50g'},
+            {'name': '小米', 'amount': '100g'}
+        ]
+
+        # 测试验证和关联
+        result = validate_and_link_ingredients(parsed_ingredients, db_session)
+
+        # 验证
+        assert len(result) == 2
+        assert result[0].ingredient_id == ingredient1.id
+        assert result[0].amount == '50g'
+        assert result[0].is_main is True  # 第一个是主料
+        assert result[0].display_order == 0
+
+        assert result[1].ingredient_id == ingredient2.id
+        assert result[1].amount == '100g'
+        assert result[1].is_main is False  # 第二个不是主料
+        assert result[1].display_order == 1
+
+    def test_validate_and_link_ingredients_skip_missing(self, db_session):
+        """测试跳过不存在的食材"""
+        from api.models import Ingredient
+        import uuid
+
+        # 创建一个测试食材
+        ingredient = Ingredient(
+            id=str(uuid.uuid4()),
+            name="山药",
+            category="谷物",
+            nature="平",
+            flavor="甘"
+        )
+        db_session.add(ingredient)
+        db_session.commit()
+
+        # 解析后的食材列表，包含不存在的食材
+        parsed_ingredients = [
+            {'name': '山药', 'amount': '50g'},
+            {'name': '不存在的食材', 'amount': '100g'}
+        ]
+
+        # 测试验证和关联
+        result = validate_and_link_ingredients(parsed_ingredients, db_session)
+
+        # 验证 - 只应该返回一个食材
+        assert len(result) == 1
+        assert result[0].ingredient_id == ingredient.id
+        assert result[0].amount == '50g'
+
+    def test_validate_and_link_ingredients_synonym_matching(self, db_session):
+        """测试同义词匹配"""
+        from api.models import Ingredient
+        import uuid
+
+        # 创建标准名称的食材
+        ingredient = Ingredient(
+            id=str(uuid.uuid4()),
+            name="山药",
+            category="谷物",
+            nature="平",
+            flavor="甘",
+            aliases=["怀山药", "淮山"]
+        )
+        db_session.add(ingredient)
+        db_session.commit()
+
+        # 使用同义词
+        parsed_ingredients = [
+            {'name': '淮山', 'amount': '50g'}
+        ]
+
+        # 测试验证和关联
+        result = validate_and_link_ingredients(parsed_ingredients, db_session)
+
+        # 验证 - 应该通过同义词匹配
+        assert len(result) == 1
+        assert result[0].ingredient_id == ingredient.id
+        assert result[0].amount == '50g'
+
+    def test_validate_and_link_ingredients_empty_list(self, db_session):
+        """测试空食材列表"""
+        # 测试空列表
+        result = validate_and_link_ingredients([], db_session)
+
+        # 验证 - 应该返回空列表
+        assert len(result) == 0
+
+    def test_validate_and_link_ingredients_skip_empty_name(self, db_session):
+        """测试跳过名称为空的食材"""
+        from api.models import Ingredient
+        import uuid
+
+        # 创建测试食材
+        ingredient = Ingredient(
+            id=str(uuid.uuid4()),
+            name="山药",
+            category="谷物",
+            nature="平",
+            flavor="甘"
+        )
+        db_session.add(ingredient)
+        db_session.commit()
+
+        # 解析后的食材列表，包含空名称
+        parsed_ingredients = [
+            {'name': '山药', 'amount': '50g'},
+            {'name': '', 'amount': '100g'},
+            {'name': None, 'amount': '200g'},
+            {'amount': '300g'}  # 没有 name 键
+        ]
+
+        # 测试验证和关联
+        result = validate_and_link_ingredients(parsed_ingredients, db_session)
+
+        # 验证 - 只应该返回一个有效食材
+        assert len(result) == 1
+        assert result[0].ingredient_id == ingredient.id
+
+    def test_validate_and_link_ingredients_default_amount(self, db_session):
+        """测试食材没有 amount 字段时使用默认值"""
+        from api.models import Ingredient
+        import uuid
+
+        # 创建测试食材
+        ingredient = Ingredient(
+            id=str(uuid.uuid4()),
+            name="山药",
+            category="谷物",
+            nature="平",
+            flavor="甘"
+        )
+        db_session.add(ingredient)
+        db_session.commit()
+
+        # 解析后的食材列表，没有 amount 字段
+        parsed_ingredients = [
+            {'name': '山药'}
+        ]
+
+        # 测试验证和关联
+        result = validate_and_link_ingredients(parsed_ingredients, db_session)
+
+        # 验证
+        assert len(result) == 1
+        assert result[0].ingredient_id == ingredient.id
+        assert result[0].amount == ''  # 默认为空字符串
 
