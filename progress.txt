@@ -496,3 +496,33 @@ Started: Thu, Jan 30, 2026 10:30:00 AM
 
 ---
 
+## [2026-01-30] - US-030, US-031, US-032, US-033
+- Verified US-030: GET /api/recipes/{id} endpoint (already implemented at line 171)
+- Verified US-031: GET /api/recipes/search and /recommend endpoints (already implemented)
+- Verified US-032: recipes router registered in main.py with prefix='/api/v1'
+- Enhanced US-033: Added 9 new API tests to achieve 100% coverage (was 84%)
+- Tests added:
+  - test_get_recipes_with_efficacy_filter - tests efficacy filter
+  - test_get_recipes_with_solar_term_filter - tests solar_term filter
+  - test_get_recipes_with_max_cooking_time_filter - tests max_cooking_time filter
+  - test_recommend_solar_term_missing_param - tests 400 error for missing solar_term
+  - test_recommend_efficacy_missing_param - tests 400 error for missing efficacy
+  - test_get_recipe_types_list - tests /types/list endpoint
+  - test_get_recipe_difficulties_list - tests /difficulties/list endpoint
+  - test_recommend_solar_term_success - tests successful solar_term recommendation
+  - test_recommend_efficacy_success - tests successful efficacy recommendation
+- Files changed: backend/tests/test_api/test_recipes_api.py, prd.json, progress.txt
+- All 186 tests pass (177 + 9 new)
+- Recipes router coverage: 100% (exceeds 85% requirement)
+- **Learnings for future iterations:**
+  - The recipes API endpoints were already fully implemented from previous work
+  - PRD specifies 'id (int, >0)' but implementation correctly uses str (UUID) - this matches codebase pattern
+  - Coverage gaps were in: filter branches (efficacy, solar_term, max_cooking_time), error handling branches (missing params), and static list endpoints
+  - When adding tests for coverage, focus on uncovered branches from coverage report
+  - The max_cooking_time filter uses <= comparison, so 45 matches recipes with cooking_time <= 45
+  - Static list endpoints (/types/list, /difficulties/list) return hardcoded data
+  - Missing parameter errors return 400 with detail message containing the parameter name
+  - All recipes endpoints require no authentication (public API)
+  - increment_view_count is called on recipe detail GET requests
+
+---
