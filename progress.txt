@@ -589,3 +589,25 @@ Started: Thu, Jan 30, 2026 10:30:00 AM
   - Tests use db_session fixture which auto-rolls back transactions after each test
 
 ---
+
+## [2026-01-30] - US-029
+- Verified GET /api/recipes endpoint already implemented
+- Router file: backend/api/routers/recipes.py
+- All acceptance criteria met:
+  - GET /api/recipes endpoint with all query parameters (page, page_size, constitution, efficacy, solar_term, difficulty, max_cooking_time, sort_by)
+  - Using Query parameters with Pydantic validation (ge, le constraints)
+  - No authentication required
+  - Calls RecipeService().get_recipes()
+  - Returns standard format: {code: 0, data: {...}}
+  - Invalid parameters return 400 via FastAPI validation
+  - 10 API tests pass
+- All 177 total tests pass
+- Files changed: prd.json
+- **Learnings for future iterations:**
+  - The router was already implemented from previous iterations (US-030, US-031, US-032, US-033)
+  - US-029 passes: false was an oversight - the endpoint was already complete
+  - FastAPI Query parameters provide built-in validation (ge=1, le=100)
+  - The endpoint is registered in main.py with prefix='/api/v1'
+  - Standard response format: {code: 0, data: {...}} for success, HTTPException for errors
+
+---

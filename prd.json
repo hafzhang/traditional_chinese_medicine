@@ -545,8 +545,8 @@
         "Tests pass"
       ],
       "priority": 29,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Endpoint already implemented in backend/api/routers/recipes.py with all query parameters and filters"
     },
     {
       "id": "US-030",
