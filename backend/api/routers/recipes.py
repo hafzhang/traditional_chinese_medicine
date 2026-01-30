@@ -91,6 +91,12 @@ async def get_recipes(
         db=db
     )
 
+    # DEBUG: print result keys
+    print(f"DEBUG: result keys = {list(result.keys())}")
+    print(f"DEBUG: page_size = {page_size}, items returned = {len(result.get('items', []))}")
+    if result.get('items'):
+        print(f"DEBUG: first item keys = {list(result['items'][0].keys())}")
+
     return {
         "code": 0,
         "data": result

@@ -230,7 +230,8 @@ class RecipeService:
             "total": total,
             "page": page,
             "page_size": page_size,
-            "items": items
+            "items": items,
+            "_debug": "new_version_v2"
         }
 
     def search_recipes(

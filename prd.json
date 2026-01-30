@@ -729,6 +729,236 @@
       "priority": 39,
       "passes": true,
       "notes": "All routes configured in pages.json: list.vue (path 'pages/recipes/list', title '食谱库'), detail.vue (path 'pages/recipes/detail', title '食谱详情'), search.vue (path 'pages/recipes/search', title '搜索菜谱')."
+    },
+    {
+      "id": "US-040",
+      "title": "首页功能导航-食谱库入口",
+      "description": "作为前端开发者，我需要在首页添加食谱库功能入口，以便于用户进入菜谱列表页",
+      "acceptanceCriteria": [
+        "在frontend/src/pages/index.vue的功能导航区域添加食谱库卡片",
+        "图标显示: 🍲",
+        "标题显示: '食谱库'",
+        "描述显示: '根据体质推荐的养生食谱和食疗方案'",
+        "行动按钮显示: '查看食谱'",
+        "点击卡片跳转到 /pages/recipes/list",
+        "验证跳转正常工作",
+        "Typecheck passes",
+        "必须调用 Playwright MCP 完成所有界面相关测试"
+      ],
+      "priority": 40,
+      "passes": true,
+      "notes": "Recipe library card already exists in home page features navigation (id: 3, icon: 🍲, title: 食谱库, path: /pages/recipes/list). Navigation uses uni.navigateTo with proper error handling."
+    },
+    {
+      "id": "US-041",
+      "title": "配置 Playwright MCP 环境",
+      "description": "作为测试工程师，我需要配置Playwright MCP环境，以便于进行前端自动化检测",
+      "acceptanceCriteria": [
+        "创建 .claude/mcp_config.json 配置文件",
+        "配置使用 @playwright/mcp@latest",
+        "创建 frontend/playwright.config.ts 配置文件",
+        "配置 baseURL: 'http://localhost:5173'",
+        "配置 webServer 自动启动前端开发服务器",
+        "创建测试目录: frontend/tests/e2e/recipes/",
+        "安装 @playwright/test 依赖",
+        "安装 chromium 浏览器驱动",
+        "验证配置正确: npx playwright test --list",
+        "Typecheck passes"
+      ],
+      "priority": 41,
+      "passes": false,
+      "notes": "Pending configuration of Playwright MCP environment for E2E testing"
+    },
+    {
+      "id": "US-042",
+      "title": "编写导航入口 Playwright 测试",
+      "description": "作为测试工程师，我需要编写功能导航入口的Playwright测试，以便于验证首页到菜谱列表的跳转",
+      "acceptanceCriteria": [
+        "创建 frontend/tests/e2e/recipes/01-navigation.spec.ts",
+        "测试用例: 验证功能导航区域存在",
+        "测试用例: 验证食谱库卡片显示 (图标🍲、标题、描述、按钮)",
+        "测试用例: 点击卡片跳转到菜谱列表页",
+        "测试用例: 验证URL变化到 /pages/recipes/list",
+        "测试用例: 验证页面标题显示",
+        "使用 page.locator() 定位元素",
+        "使用 expect().toBeVisible() 验证可见性",
+        "使用 expect().toHaveText() 验证文本",
+        "运行测试并通过: npx playwright test 01-navigation",
+        "Typecheck passes"
+      ],
+      "priority": 42,
+      "passes": false,
+      "notes": "Pending implementation of navigation entry E2E tests"
+    },
+    {
+      "id": "US-043",
+      "title": "编写菜谱列表页 Playwright 测试",
+      "description": "作为测试工程师，我需要编写菜谱列表页的Playwright测试，以便于验证列表页功能",
+      "acceptanceCriteria": [
+        "创建 frontend/tests/e2e/recipes/02-list.spec.ts",
+        "测试用例: 页面基本元素显示 (筛选器、体质选项)",
+        "测试用例: 菜谱列表显示 (卡片、名称、图片、难度标签)",
+        "测试用例: 体质筛选功能 (点击筛选后列表更新)",
+        "测试用例: 节气筛选功能",
+        "测试用例: 点击菜谱卡片跳转到详情页",
+        "测试用例: 下拉刷新功能",
+        "等待数据加载: page.waitForSelector('.recipe-item', {timeout: 10000})",
+        "验证筛选器存在: page.locator('.filter-section')",
+        "运行测试并通过",
+        "Typecheck passes"
+      ],
+      "priority": 43,
+      "passes": false,
+      "notes": "Pending implementation of recipe list page E2E tests"
+    },
+    {
+      "id": "US-044",
+      "title": "编写菜谱详情页 Playwright 测试",
+      "description": "作为测试工程师，我需要编写菜谱详情页的Playwright测试，以便于验证详情页显示",
+      "acceptanceCriteria": [
+        "创建 frontend/tests/e2e/recipes/03-detail.spec.ts",
+        "测试用例: 详情页基本元素 (封面图、名称、难度、体质、食材、步骤)",
+        "测试用例: desc 区域蓝色背景显示 (验证 backgroundColor)",
+        "测试用例: tip 区域黄色背景显示 (验证 backgroundColor)",
+        "测试用例: 体质标签正确显示 (中文映射、不是代码)",
+        "测试用例: 功效标签和节气标签显示",
+        "使用 page.evaluate() 获取计算样式",
+        "使用 window.getComputedStyle(el).backgroundColor",
+        "从列表页点击进入详情页",
+        "运行测试并通过",
+        "Typecheck passes"
+      ],
+      "priority": 44,
+      "passes": false,
+      "notes": "Pending implementation of recipe detail page E2E tests"
+    },
+    {
+      "id": "US-045",
+      "title": "编写 API 字段验证 Playwright 测试",
+      "description": "作为测试工程师，我需要编写API字段验证的Playwright测试，以便于验证后端API返回正确字段",
+      "acceptanceCriteria": [
+        "创建 frontend/tests/e2e/recipes/04-api.spec.ts",
+        "测试用例: GET /api/v1/recipes 返回正确字段 (cooking_time, cover_image, difficulty, efficacy_tags, suitable_constitutions)",
+        "测试用例: GET /api/v1/recipes/{id} 返回完整详情 (desc, tip, ingredients, steps, calories)",
+        "测试用例: 验证字段类型 (difficulty 枚举值、JSON 数组)",
+        "测试用例: 按体质筛选验证返回结果包含该体质",
+        "测试用例: 按节气筛选验证返回结果包含该节气",
+        "测试用例: 关键词搜索验证结果包含关键词",
+        "测试用例: 组合筛选验证同时满足多个条件",
+        "使用 request.get() 调用 API",
+        "使用 expect(response.status()).toBe(200) 验证状态",
+        "使用 expect().toHaveProperty() 验证字段",
+        "运行测试并通过",
+        "Typecheck passes"
+      ],
+      "priority": 45,
+      "passes": false,
+      "notes": "Pending implementation of API field validation E2E tests"
+    },
+    {
+      "id": "US-046",
+      "title": "编写搜索功能 Playwright 测试",
+      "description": "作为测试工程师，我需要编写搜索功能的Playwright测试，以便于验证搜索筛选页面",
+      "acceptanceCriteria": [
+        "创建 frontend/tests/e2e/recipes/05-search.spec.ts",
+        "测试用例: 搜索页面基本元素 (搜索框、搜索按钮、筛选器)",
+        "测试用例: 关键词搜索功能 (输入关键词、点击搜索、验证结果)",
+        "测试用例: 体质筛选功能",
+        "测试用例: 难度筛选功能",
+        "测试用例: 组合筛选功能 (同时使用多个筛选条件)",
+        "测试用例: 清除筛选功能",
+        "测试用例: 无结果提示显示",
+        "使用 searchInput.fill() 输入关键词",
+        "使用 searchBtn.click() 触发搜索",
+        "运行测试并通过",
+        "Typecheck passes"
+      ],
+      "priority": 46,
+      "passes": false,
+      "notes": "Pending implementation of search functionality E2E tests"
+    },
+    {
+      "id": "US-047",
+      "title": "运行所有 Playwright 测试并生成报告",
+      "description": "作为测试工程师，我需要运行所有Playwright测试并生成报告，以便于验证整体功能",
+      "acceptanceCriteria": [
+        "运行所有测试: npx playwright test",
+        "验证所有测试用例通过 (passed >= total)",
+        "生成 HTML 报告: npx playwright test --reporter=html",
+        "打开报告查看: npx playwright show-report",
+        "报告包含: 测试结果、执行时间、失败用例详情",
+        "失败测试时自动截图",
+        "失败测试时自动录制视频",
+        "验证测试覆盖率: 导航、列表、详情、搜索、API",
+        "导出测试结果 JSON: playwright-report/results.json",
+        "CI/CD 集成配置 (可选)",
+        "Typecheck passes"
+      ],
+      "priority": 47,
+      "passes": false,
+      "notes": "Pending execution of all Playwright tests and report generation"
+    },
+    {
+      "id": "US-048",
+      "title": "Excel 新增字段验收测试",
+      "description": "作为测试工程师，我需要验证Excel新增字段的数据质量，以便于确保智能推测功能正确",
+      "acceptanceCriteria": [
+        "验证 difficulty 字段: 100% 填充，不为 NULL",
+        "验证 suitable_constitutions 字段: >= 80% 填充率",
+        "验证 avoid_constitutions 字段: >= 30% 填充率",
+        "验证 efficacy_tags 字段: >= 80% 填充率",
+        "验证 solar_terms 字段: >= 50% 填充率",
+        "验证 difficulty 分布: easy/medium/hard 合理分布",
+        "执行数据库查询验证",
+        "执行 API 验证: curl /api/v1/recipes 检查字段",
+        "生成验收报告",
+        "所有标准通过"
+      ],
+      "priority": 48,
+      "passes": false,
+      "notes": "Pending validation of Excel imported fields data quality"
+    },
+    {
+      "id": "US-049",
+      "title": "图片匹配验收测试",
+      "description": "作为测试工程师，我需要验证图片匹配功能，以便于确保菜谱封面图正确显示",
+      "acceptanceCriteria": [
+        "验证扫描图片数量: >= 5,000 张",
+        "验证图片匹配率: >= 40%",
+        "验证 cover_image 字段有值",
+        "验证前端列表页图片加载",
+        "验证前端详情页图片加载",
+        "验证图片加载失败显示占位图",
+        "执行数据库查询: SELECT COUNT(*) FROM recipes WHERE cover_image IS NOT NULL",
+        "抽样验证10条菜谱图片路径正确",
+        "所有标准通过"
+      ],
+      "priority": 49,
+      "passes": false,
+      "notes": "Pending validation of image matching functionality"
+    },
+    {
+      "id": "US-050",
+      "title": "用户功能验收测试",
+      "description": "作为测试工程师，我需要验证用户端功能完整性，以便于确保用户体验符合预期",
+      "acceptanceCriteria": [
+        "验证按体质浏览菜谱功能",
+        "验证按节气浏览菜谱功能",
+        "验证关键词搜索功能",
+        "验证组合筛选功能 (体质+功效+难度)",
+        "验证查看菜谱详情功能",
+        "验证 desc 区域蓝色背景显示",
+        "验证 tip 区域黄色背景显示",
+        "验证体质标签正确映射 (中文显示)",
+        "验证功效标签和节气标签显示",
+        "验证食材列表和制作步骤显示",
+        "执行 Playwright E2E 测试",
+        "执行手工验证测试",
+        "所有标准通过"
+      ],
+      "priority": 50,
+      "passes": false,
+      "notes": "Pending comprehensive user acceptance testing"
     }
   ]
 }

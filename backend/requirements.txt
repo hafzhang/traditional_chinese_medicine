@@ -30,3 +30,17 @@ httpx==0.25.2
 # Utilities
 python-dateutil==2.8.2
 pytz==2023.3
+
+# MVP 新增依赖
+# 阿里云OSS SDK (CDN视频托管)
+oss2>=2.18.0
+
+# 通义千问 (DashScope) API - AI反馈
+dashscope>=1.0.0
+
+# 腾讯云COS SDK (可选，备用CDN)
+# qcloud-cos>=1.9.0
+
+# Phase 2 (deferred):
+# reportlab>=4.0.0      # PDF generation
+# qrcode>=7.4.0         # QR code generation

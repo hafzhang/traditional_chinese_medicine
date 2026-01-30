@@ -575,3 +575,25 @@ Started: Thu, Jan 30, 2026 10:30:00 AM
   - Empty state has different messages for "no keyword entered" vs "no results found"
 
 ---
+
+## [2026-01-30] - US-040
+- Verified recipe library card already exists in home page features navigation
+- File: frontend/src/pages/index/index.vue
+- Card details (id: 3, lines 95-103):
+  - Icon: 🍲 (line 96)
+  - Title: '食谱库' (line 97)
+  - Description: '根据体质推荐的养生食谱和食疗方案' (line 98)
+  - Action button: '查看食谱' (line 100)
+  - Path: '/pages/recipes/list' (line 101)
+  - Gradient: linear-gradient(135deg, #fa709a 0%, #fee140 100%)
+- Navigation uses uni.navigateTo with proper error handling (lines 148-169)
+- All acceptance criteria met without code changes
+- Files changed: prd.json, progress.txt
+- **Learnings for future iterations:**
+  - Some user stories may already be implemented from previous work
+  - Always verify existing code before making changes
+  - The features array in index.vue contains all feature navigation cards
+  - Navigation uses isTabBar flag to choose between switchTab and navigateTo
+  - Error handling in navigateTo shows toast for pages under development
+
+---

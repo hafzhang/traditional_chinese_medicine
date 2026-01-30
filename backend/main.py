@@ -14,7 +14,10 @@ from fastapi.staticfiles import StaticFiles
 
 from api.config import settings
 from api.database import engine, Base
-from api.routers import constitution, health, ingredients, recipes, acupoints, tongue, courses, wellness
+from api.routers import (
+    constitution, health, ingredients, recipes, acupoints, tongue, courses, wellness,
+    exercises, daily_routines, checkins
+)
 
 
 @asynccontextmanager
@@ -71,6 +74,10 @@ app.include_router(acupoints.router, prefix="/api/v1", tags=["Acupoints"])
 app.include_router(tongue.router, prefix="/api/v1", tags=["Tongue"])
 app.include_router(courses.router, prefix="/api/v1", tags=["Courses"])
 app.include_router(wellness.router, prefix="/api/v1", tags=["Wellness"])
+# MVP 新增路由
+app.include_router(exercises.router, prefix="/api/v1", tags=["Exercises"])
+app.include_router(daily_routines.router, prefix="/api/v1", tags=["Daily Routines"])
+app.include_router(checkins.router, prefix="/api/v1", tags=["Check-ins"])
 
 
 @app.get("/")

@@ -37,6 +37,18 @@ class Settings(BaseSettings):
     TENCENT_COS_BUCKET: str = ""
     TENCENT_COS_REGION: str = "ap-guangzhou"
 
+    # 阿里云OSS (Aliyun OSS) - CDN配置
+    OSS_ACCESS_KEY_ID: str = ""
+    OSS_ACCESS_KEY_SECRET: str = ""
+    OSS_ENDPOINT: str = ""  # e.g., "oss-cn-hangzhou.aliyuncs.com"
+    OSS_BUCKET_NAME: str = ""
+    OSS_VIDEO_PATH: str = "videos/exercises/"
+    OSS_IMAGE_PATH: str = "images/"
+    OSS_BASE_URL: str = ""  # 自动生成: https://{bucket}.{endpoint}
+
+    # 通义千问 (DashScope) - AI反馈
+    DASHSCOPE_API_KEY: str = ""
+
     # Constitution Scoring
     SCORE_CONVERT_FACTOR: float = 2.5
     THRESHOLD_PRIMARY: int = 40

@@ -28,6 +28,7 @@ class User(Base):
 
     # Relationships
     constitution_results = relationship("ConstitutionResult", back_populates="user")
+    checkins = relationship("UserCheckIn", cascade="all, delete-orphan")
 
 
 class Question(Base):
@@ -449,3 +450,107 @@ class RecipeStep(Base):
 
     # Relationships
     recipe = relationship("Recipe", back_populates="step_relations")
+
+
+class Exercise(Base):
+    """运动/功法表 - MVP 新增"""
+    __tablename__ = "exercises"
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    name = Column(String(100), nullable=False)
+    name_en = Column(String(100))
+    description = Column(Text)
+
+    # 分类
+    exercise_type = Column(String(50))  # qigong, tai_chi, baduanjin, yijinjing, wuqinxi
+    difficulty_level = Column(String(20))  # beginner, intermediate, advanced
+
+    # 体质关联（与现有系统对接）
+    target_constitutions = Column(JSON)  # 适用体质，如 ["qi_deficiency", "yang_deficiency"]
+
+    # 内容（CDN视频URL）
+    video_url = Column(String(500))  # CDN视频链接
+    image_url = Column(String(500))  # 封面图
+    step_images = Column(JSON)  # 步骤图片列表
+    instructions = Column(JSON)  # 动作要领步骤列表
+
+    # 物理细节
+    duration_seconds = Column(Integer)  # 时长（秒）
+    repetitions = Column(String(50))  # 重复次数，如 "10-15次"
+    target_body_areas = Column(JSON)  # 目标部位，如 ["肩部", "腰部"]
+
+    # 禁忌与注意
+    contraindications = Column(Text)  # 禁忌症
+    caution_notes = Column(Text)  # 注意事项
+
+    # 功效
+    benefits = Column(JSON)  # 功效描述列表
+    tags = Column(JSON)  # 标签列表
+
+    # 统计
+    view_count = Column(Integer, default=0)
+    favorite_count = Column(Integer, default=0)
+
+    created_at = Column(DateTime, server_default=func.now())
+    updated_at = Column(DateTime, onupdate=func.now())
+
+
+class DailyRoutine(Base):
+    """起居作息表 - MVP 新增"""
+    __tablename__ = "daily_routines"
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    name = Column(String(100), nullable=False)
+    description = Column(Text)
+
+    # 体质关联
+    target_constitutions = Column(JSON)  # 适用体质列表
+
+    # 时间安排
+    wake_time = Column(String(10))  # 起床时间，如 "06:30"
+    sleep_time = Column(String(10))  # 睡眠时间，如 "22:00"
+
+    # 作息分段（JSON存储详细安排）
+    morning_routine = Column(JSON)  # 晨间安排：起床、洗漱、早餐、运动
+    afternoon_routine = Column(JSON)  # 午间安排：午餐、午休、工作
+    evening_routine = Column(JSON)  # 晚间安排：晚餐、放松、睡眠准备
+
+    # 季节调整
+    seasonal_adjustments = Column(JSON)  # {"spring": {...}, "summer": {...}, ...}
+
+    # 餐饮时间
+    meal_timings = Column(JSON)  # {"breakfast": "07:00", "lunch": "12:00", "dinner": "18:00"}
+
+    # 温馨提示
+    tips = Column(JSON)  # 贴士列表
+
+    created_at = Column(DateTime, server_default=func.now())
+    updated_at = Column(DateTime, onupdate=func.now())
+
+
+class UserCheckIn(Base):
+    """用户健康打卡表 - MVP 新增"""
+    __tablename__ = "user_checkins"
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    user_id = Column(String(36), ForeignKey("users.id"), nullable=False)
+    week_number = Column(Integer, nullable=False)  # 第几周：1, 2, 3...
+
+    # 每日打卡数据（JSON存储7天的数据）
+    daily_entries = Column(JSON)  # [{"day": 1, "date": "...", "exercises_completed": [...], "routine_followed": bool, "mood_score": 7, "notes": "..."}]
+
+    # 本周汇总
+    exercise_completion_rate = Column(Float, default=0)  # 运动完成率 0-100
+    routine_adherence_rate = Column(Float, default=0)  # 作息遵守率 0-100
+    mood_score = Column(Float)  # 本周平均情绪分 1-10
+    symptoms_improved = Column(JSON)  # 改善的症状列表
+
+    # AI/教练反馈
+    coach_feedback = Column(Text)  # 教练人工反馈
+    ai_recommendations = Column(JSON)  # AI生成的建议 {"trends": [...], "recommendations": [...], "motivational_message": "..."}
+
+    created_at = Column(DateTime, server_default=func.now())
+    updated_at = Column(DateTime, onupdate=func.now())
+
+    # Relationships
+    user = relationship("User")

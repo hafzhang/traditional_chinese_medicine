@@ -103,6 +103,30 @@
       }
     },
     {
+      "path": "pages/exercises/list",
+      "style": {
+        "navigationBarTitleText": "运动功法"
+      }
+    },
+    {
+      "path": "pages/exercises/detail",
+      "style": {
+        "navigationBarTitleText": "运动详情"
+      }
+    },
+    {
+      "path": "pages/routine/index",
+      "style": {
+        "navigationBarTitleText": "起居作息"
+      }
+    },
+    {
+      "path": "pages/checkin/index",
+      "style": {
+        "navigationBarTitleText": "健康打卡"
+      }
+    },
+    {
       "path": "pages/debug/api-test",
       "style": {
         "navigationBarTitleText": "API测试"
