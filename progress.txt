@@ -186,3 +186,28 @@ Started: Thu, Jan 30, 2026 10:30:00 AM
   - All tests are in tests/test_unit/test_import_recipes.py, which uses sys.path.insert to import from scripts directory
 
 ---
+
+## [2026-01-30] - US-018
+- Implemented check_recipe_exists function in backend/scripts/import_recipes.py
+- Added database imports: SessionLocal from api.database, Recipe model from api.models
+- Added sys.path.insert setup to import from parent directory
+- Function queries Recipe table by name using filter_by(name=name).first()
+- Returns True if recipe exists, False otherwise
+- Logs "跳过已存在: {name}" when recipe found
+- Created 4 unit tests in tests/test_unit/test_import_recipes.py:
+  - test_check_recipe_exists_returns_true_when_exists
+  - test_check_recipe_exists_returns_false_when_not_exists
+  - test_check_recipe_exists_case_sensitive
+  - test_check_recipe_exists_multiple_recipes
+- All 120 tests pass (109 Phase 1 + 11 import_recipes tests)
+- Typecheck passes
+- Files changed: backend/scripts/import_recipes.py, backend/tests/test_unit/test_import_recipes.py
+- **Learnings for future iterations:**
+  - The import_recipes.py script needs sys.path.insert to import from api/ directory
+  - SessionLocal from api.database provides database session for queries
+  - filter_by(name=name) performs exact match query on Recipe.name field
+  - SQLite case sensitivity depends on column collation, but Chinese characters are handled correctly
+  - Tests use db_session fixture from conftest.py which auto-rolls back transactions
+  - When adding tests to existing test file, be careful with Edit tool to not replace existing classes
+
+---
