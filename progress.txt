@@ -18,6 +18,26 @@ Started: Thu, Jan 30, 2026 10:30:00 AM
   - JSON columns are used for array data (constitutions, tags, etc.)
 ---
 
+## [2026-01-30] - US-016
+- Created backend/scripts/import_recipes.py with shebang and encoding
+- Added argparse with --file (required), --dry-run (optional), --limit (optional)
+- Created ImportStats class with: total, success, skipped, failed, errors fields
+- Implemented main() function as entry point with argument parsing
+- Implemented print_summary() function to display import statistics
+- Configured logging using logging.basicConfig(level=logging.INFO)
+- Added TODO markers for future user stories (US-017 through US-021)
+- Files changed: backend/scripts/import_recipes.py
+- Typecheck passed: Script imports and runs successfully
+- **Learnings for future iterations:**
+  - The existing import_recipes.py had a different structure (RecipeImporter class) that didn't match PRD
+  - PRD specifies a simple script structure with ImportStats class and standalone functions
+  - Used proper shebang #!/usr/bin/env python3 and encoding # -*- coding: utf-8 -*-
+  - argparse required parameter means user must provide --file or get error
+  - ImportStats class provides cleaner interface than plain dict for tracking statistics
+  - Added TODO comments to indicate which user stories will add which functionality
+
+---
+
 ## Codebase Patterns
 - This project uses custom migration scripts instead of Alembic (see backend/migrations/)
 - Migration scripts are located in backend/migrations/ and follow pattern migrate_*.py
