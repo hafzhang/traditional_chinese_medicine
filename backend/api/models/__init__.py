@@ -261,9 +261,9 @@ class Recipe(Base):
     updated_at = Column(DateTime, onupdate=func.now())
     is_deleted = Column(Boolean, default=False)
 
-    # Relationships (ingredient_relations added in US-002, step_relations pending US-003)
+    # Relationships (added in US-002 and US-003)
     ingredient_relations = relationship("RecipeIngredient", back_populates="recipe")
-    # step_relations = relationship("RecipeStep", back_populates="recipe")
+    step_relations = relationship("RecipeStep", back_populates="recipe")
 
 
 class ConstitutionInfo(Base):
@@ -432,3 +432,20 @@ class RecipeIngredient(Base):
     # Relationships
     recipe = relationship("Recipe", back_populates="ingredient_relations")
     ingredient = relationship("Ingredient")
+
+
+class RecipeStep(Base):
+    """菜谱制作步骤表 - Excel导入新增"""
+    __tablename__ = "recipe_steps"
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    recipe_id = Column(String(36), ForeignKey("recipes.id"), nullable=False)
+    step_number = Column(Integer, nullable=False)  # 步骤编号
+    description = Column(Text, nullable=False)  # 步骤描述
+    image_url = Column(String(500))  # 步骤图片
+    duration = Column(Integer)  # 该步骤所需时间（分钟）
+
+    created_at = Column(DateTime, server_default=func.now())
+
+    # Relationships
+    recipe = relationship("Recipe", back_populates="step_relations")
