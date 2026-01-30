@@ -47,3 +47,17 @@ Started: Thu, Jan 30, 2026 10:30:00 AM
   - The relationship uses 'ingredient_relations' naming to avoid conflict with JSON 'ingredients' field
 
 ---
+
+## [2026-01-30] - US-003
+- Created RecipeStep association table model in backend/api/models/__init__.py
+- Added all required fields: id, recipe_id (FK), step_number, description, image_url, duration, created_at
+- Enabled step_relations relationship in Recipe model (back_populates='recipe')
+- Files changed: backend/api/models/__init__.py
+- Typecheck passed: all models import successfully
+- **Learnings for future iterations:**
+  - Both RecipeIngredient and RecipeStep models now use UUID string primary keys
+  - The relationships are named 'ingredient_relations' and 'step_relations' to avoid conflict with JSON fields
+  - RecipeStep tests will be added in US-028 as part of RecipeService test suite
+  - Step duration is stored in minutes for easier calculation
+
+---
