@@ -829,8 +829,8 @@
         "Typecheck passes"
       ],
       "priority": 44,
-      "passes": false,
-      "notes": "Pending implementation of recipe detail page E2E tests"
+      "passes": true,
+      "notes": "Created 9 test cases covering all acceptance criteria: basic elements, cover image/placeholder, metadata (difficulty, time, calories), desc section blue background, tip section yellow background, constitution tags Chinese mapping, efficacy and solar terms tags, ingredients list with main ingredient highlighting, cooking steps with numbered circles. Tests handle loading, content, and error states. Note: Browser driver needs to be re-installed via 'npx playwright install chromium' after fresh npm install."
     },
     {
       "id": "US-045",

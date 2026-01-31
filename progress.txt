@@ -677,3 +677,34 @@ Started: Thu, Jan 30, 2026 10:30:00 AM
   - Pull-to-refresh gesture testing is complex - verify element attributes instead
 
 ---
+
+## [2026-01-31] - US-044
+- Created frontend/tests/e2e/recipes/03-detail.spec.ts with 9 test cases
+- Test cases implemented:
+  1. should display detail page basic elements - verifies cover image, name, difficulty, constitution, ingredients, steps
+  2. should display recipe cover image or placeholder - checks for 🍲 placeholder icon when no image
+  3. should display recipe metadata (difficulty, time, calories) - verifies difficulty enum values
+  4. should display desc section with blue gradient background - uses window.getComputedStyle() to verify backgroundColor (blue component > 200)
+  5. should display tip section with yellow gradient background - uses window.getComputedStyle() to verify backgroundColor (R and G components > 200)
+  6. should display constitution tags with Chinese names (not codes) - verifies '质' character in tag text, checks against known Chinese constitution names
+  7. should display efficacy tags and solar terms tags - verifies both optional tag sections
+  8. should display ingredients list with main ingredient highlighting - verifies yellow background and '主料' badge
+  9. should display cooking steps with numbered circles - verifies step-number, step-description, optional step-duration
+- Tests navigate from list page to detail page following existing test patterns
+- Tests handle loading, content, and error states gracefully
+- Tests use test.skip() for optional elements that may not be present
+- Files changed: frontend/tests/e2e/recipes/03-detail.spec.ts, prd.json, progress.txt
+- **Learnings for future iterations:**
+  - Detail page tests should handle multiple states: loading, content loaded, error (recipe not found)
+  - Use window.getComputedStyle(el).backgroundColor to verify gradient backgrounds
+  - For blue gradient (#e6f7ff to #f0f5ff), check blue component > 200 in RGB
+  - For yellow gradient (#fffbe6 to #fff7e6), check R and G components > 200 in RGB
+  - Constitution tags should be verified to contain '质' character to ensure Chinese names (not codes)
+  - test.skip() can be used for optional elements that may not exist on all recipes
+  - Detail page URL pattern: /#/pages/recipes/detail?id=xxx
+  - Main ingredients have .main class and '主料' badge for visual highlighting
+  - Step numbers are displayed in circular elements with .step-number class
+  - The beforeEach navigation pattern works well for detail page tests starting from list page
+  - Note: After npm install, Playwright browser drivers need to be re-installed via 'npx playwright install chromium'
+
+---
