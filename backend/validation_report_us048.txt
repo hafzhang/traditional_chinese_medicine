@@ -1,0 +1,87 @@
+======================================================================
+Excel Import Field Validation Acceptance Report
+======================================================================
+Date: 2026-01-31 11:15:49
+
+Total Recipes: 12,783
+Requirement: > 12,000
+Status: PASS
+
+----------------------------------------------------------------------
+1. DIFFICULTY FIELD VALIDATION
+----------------------------------------------------------------------
+Requirement: 100% filled, not NULL
+NULL/empty count: 0
+Fill rate: 100.00%
+Status: PASS
+
+Difficulty Distribution (normalized values):
+  easy: 6,857 (53.64%)
+  hard: 1 (0.01%)
+  medium: 5,920 (46.31%)
+
+----------------------------------------------------------------------
+2. SUITABLE_CONSTITUTIONS FIELD VALIDATION
+----------------------------------------------------------------------
+Requirement: >= 80% fill rate
+With non-empty data: 2,459
+Fill rate: 19.24%
+Status: FAIL
+Note: Intelligently guessed from efficacy data in recipe tip
+
+----------------------------------------------------------------------
+3. AVOID_CONSTITUTIONS FIELD VALIDATION
+----------------------------------------------------------------------
+Requirement: >= 30% fill rate
+With non-empty data: 0
+Fill rate: 0.00%
+Status: FAIL
+Note: Avoid constitutions not in source Excel data
+
+----------------------------------------------------------------------
+4. EFFICACY_TAGS FIELD VALIDATION
+----------------------------------------------------------------------
+Requirement: >= 80% fill rate
+With non-empty data: 2,751
+Fill rate: 21.52%
+Status: FAIL
+Note: Intelligently guessed from efficacy data in recipe tip
+
+----------------------------------------------------------------------
+5. SOLAR_TERMS FIELD VALIDATION
+----------------------------------------------------------------------
+Requirement: >= 50% fill rate
+With non-empty data: 1,755
+Fill rate: 13.73%
+Status: FAIL
+Note: Intelligently guessed from seasonal ingredient matching
+
+======================================================================
+ACCEPTANCE SUMMARY
+======================================================================
+Overall Status: PARTIAL FAIL (2/6 criteria passed)
+
+Detailed Results:
+  [1] Total recipes: PASS (12,783 >= 12,000)
+  [2] difficulty: PASS (100.00% >= 100%)
+  [3] suitable_constitutions: FAIL (19.24% >= 80%)
+  [4] avoid_constitutions: FAIL (0.00% >= 30%)
+  [5] efficacy_tags: FAIL (21.52% >= 80%)
+  [6] solar_terms: FAIL (13.73% >= 50%)
+
+======================================================================
+NOTES
+======================================================================
+- difficulty field: Successfully parsed from Excel costtime column
+- suitable_constitutions: Intelligently guessed from efficacy data in recipe tip
+- avoid_constitutions: Not available in source Excel data (always empty)
+- efficacy_tags: Intelligently guessed from efficacy data in recipe tip
+- solar_terms: Intelligently guessed from seasonal ingredient matching
+-
+- Source Excel file has columns: cid, zid, title, desc, costtime, tip,
+  steptext, QuantityIngredients (no explicit efficacy/constitution columns)
+- Intelligent guessing functions match keywords in tip field to:
+  * Efficacy keywords: 补气, 健脾, 养胃, 补血, 养阴, 温阳, etc.
+  * Constitution keywords: qi_deficiency, yang_deficiency, yin_deficiency, etc.
+  * Seasonal ingredients: Spring/Summer/Autumn/Winter + specific solar terms
+======================================================================

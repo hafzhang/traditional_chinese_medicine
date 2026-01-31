@@ -784,3 +784,36 @@ Started: Thu, Jan 30, 2026 10:30:00 AM
   - The search page uses local ref for filters instead of store filters for search-specific state management
 
 ---
+
+## [2026-01-31] - US-048
+- Executed Excel imported field validation acceptance tests
+- Re-ran Excel import to populate database with 12,783 recipes (12,778 new, 6 skipped)
+- Validation results:
+  - Total recipes: 12,783 (PASS - > 12,000)
+  - difficulty field: 100% filled (PASS - 100% >= 100%)
+  - difficulty distribution: easy 53.64%, medium 46.31%, hard 0.01% (PASS - reasonable distribution)
+  - suitable_constitutions: 19.24% filled (FAIL - need >= 80%)
+  - avoid_constitutions: 0% filled (FAIL - need >= 30%)
+  - efficacy_tags: 21.52% filled (FAIL - need >= 80%)
+  - solar_terms: 13.73% filled (FAIL - need >= 50%)
+- Overall: 2/6 criteria passed (PARTIAL FAIL)
+- Failures are due to SOURCE DATA LIMITATIONS:
+  - Excel file has columns: cid, zid, title, desc, costtime, tip, steptext, QuantityIngredients
+  - NO explicit efficacy/constitution/solar_term columns in source data
+  - Intelligent guessing functions work correctly but only when efficacy keywords exist in tip field
+  - suitable_constitutions and efficacy_tags filled from tip field keyword matching
+  - avoid_constitutions always empty (not in source data)
+  - solar_terms filled from seasonal ingredient matching (limited coverage)
+- Generated validation report: backend/validation_report_us048.txt
+- Files changed: backend/validation_report_us048.txt, prd.json, progress.txt
+- **Learnings for future iterations:**
+  - Excel import intelligent guessing is limited by source data quality
+  - The source Excel file doesn't have explicit efficacy/constitution columns
+  - Only ~20% of recipes have efficacy keywords in tip field that can be parsed
+  - avoid_constitutions is always 0% because source data doesn't have this information
+  - The difficulty parsing works perfectly (100% filled) because costtime column exists
+  - When setting PRD acceptance criteria, consider source data limitations
+  - Validation report should document both results and root causes of failures
+  - 19.24% fill rate for suitable_constitutions with 2,459 recipes having data is still useful for filtering
+
+---
