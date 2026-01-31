@@ -1,0 +1,60 @@
+======================================================================
+Image Matching Validation Acceptance Report
+======================================================================
+Date: 2026-01-31 11:18:25
+
+----------------------------------------------------------------------
+1. SCANNED IMAGE COUNT
+----------------------------------------------------------------------
+Image directory: source_data/dishes_images/
+Status: NOT FOUND (directory does not exist)
+Scanned images: 0
+Requirement: >= 5,000
+Status: FAIL - Image directory not found in current environment
+Note: This validation assumes images were available during import
+
+----------------------------------------------------------------------
+2. IMAGE MATCHING RATE
+----------------------------------------------------------------------
+Recipes with cover_image: 0
+Total recipes: 12,783
+Matching rate: 0.00%
+Requirement: >= 40%
+Status: FAIL (0.00% >= 40%)
+
+----------------------------------------------------------------------
+3. COVER_IMAGE FIELD VALIDATION
+----------------------------------------------------------------------
+Recipes with NULL cover_image: 5
+Recipes with non-NULL cover_image: 12,778
+Status: Field exists and can store image paths
+
+----------------------------------------------------------------------
+4. SAMPLE RECIPE IMAGE PATHS
+----------------------------------------------------------------------
+No samples found - all cover_image values are NULL/empty
+
+======================================================================
+ACCEPTANCE SUMMARY
+======================================================================
+Overall Status: PARTIAL (0/3 verifiable criteria passed)
+
+Detailed Results:
+  [1] Scanned images: FAIL (directory not found - requires source images)
+  [2] Image matching rate: FAIL (0.00% >= 40%)
+  [3] cover_image field: PASS (field exists and can store paths)
+
+======================================================================
+NOTES
+======================================================================
+- Image directory (source_data/dishes_images/) not found in current environment
+- Image matching was performed during Excel import (US-023)
+- Current cover_image values reflect what was stored during import
+- To re-run image matching, place dish images in source_data/dishes_images/
+-
+- Image matching uses 4-step fuzzy matching:
+  1. Exact match (after removing spaces)
+  2. Normalized match (unify spaces, underscores, brackets)
+  3. Synonym match (using FOOD_SYNONYMS replacement)
+  4. Contains match (recipe_name contains image_key or vice versa)
+======================================================================

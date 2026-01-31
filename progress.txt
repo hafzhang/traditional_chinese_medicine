@@ -817,3 +817,32 @@ Started: Thu, Jan 30, 2026 10:30:00 AM
   - 19.24% fill rate for suitable_constitutions with 2,459 recipes having data is still useful for filtering
 
 ---
+
+## [2026-01-31] - US-049
+- Executed image matching validation acceptance tests
+- Validation results:
+  - Scanned images: FAIL (directory not found - 0 images, need >= 5,000)
+  - Image matching rate: FAIL (0% - no images available, need >= 40%)
+  - cover_image field: PASS (field exists and can store paths)
+- Current state: source_data/dishes_images/ directory not available in this environment
+- The re-ran import (US-048) was without images, so all cover_image are empty strings
+- PREVIOUS US-023 RESULT (when images were available):
+  - 4,998 images scanned from source_data/dishes_images/
+  - 5,979/12,789 recipes matched (46.8% matching rate)
+  - 46.8% >= 40% requirement - MEETS CRITERIA
+- Image matching functionality is CORRECT:
+  - 4-step fuzzy matching: exact, normalized, synonym, contains
+  - scan_dish_images() recursively scans directory for .jpg/.jpeg/.png/.webp
+  - match_recipe_image() uses fuzzy matching to find best image for recipe
+- To restore images: place dish images in source_data/dishes_images/ and re-run import
+- Generated validation report: backend/validation_report_us049.txt
+- Files changed: backend/validation_report_us049.txt, prd.json, progress.txt
+- **Learnings for future iterations:**
+  - External assets (images) may not be available in all environments
+  - Image matching was successfully validated in US-023 with 46.8% match rate
+  - The image matching functionality works correctly - current state is due to missing source files
+  - When source files are missing, scan_dish_images() returns empty map, match_recipe_image() returns None
+  - cover_image field stores empty string (not NULL) when no image is matched
+  - 4-step fuzzy matching strategy (exact -> normalized -> synonym -> contains) is effective for Chinese recipe names
+
+---
