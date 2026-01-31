@@ -94,19 +94,25 @@ ANALYSIS_PROMPT = """你是一位经验丰富的中医食疗专家。请分析�
 class AIRecipeAnalyzer:
     """AI驱动的食谱分析器"""
 
-    def __init__(self, api_key=None):
+    def __init__(self, api_key=None, base_url=None):
         """
         初始化分析器
 
         Args:
             api_key: Anthropic API密钥。如果为None，则使用模拟模式
+            base_url: API基础URL，用于自定义API端点（如智谱AI）
         """
         self.api_key = api_key or os.environ.get("ANTHROPIC_API_KEY")
+        self.base_url = base_url or os.environ.get("ANTHROPIC_BASE_URL")
         self.use_ai = ANTHROPIC_AVAILABLE and self.api_key
 
         if self.use_ai:
-            self.client = anthropic.Anthropic(api_key=self.api_key)
-            print("[OK] 使用AI模式分析食谱")
+            if self.base_url:
+                self.client = anthropic.Anthropic(api_key=self.api_key, base_url=self.base_url)
+                print(f"[OK] 使用AI模式分析食谱 (自定义API: {self.base_url})")
+            else:
+                self.client = anthropic.Anthropic(api_key=self.api_key)
+                print("[OK] 使用AI模式分析食谱")
         else:
             print("[WARNING] 使用模拟模式分析食谱（数据质量较低）")
             print("  要启用AI模式，请设置ANTHROPIC_API_KEY环境变量")
@@ -302,15 +308,16 @@ def process_recipes_in_range(df, start_idx, end_idx, analyzer, output_file):
     """
     print(f"\n处理食谱 {start_idx+1}-{end_idx}，共 {end_idx-start_idx} 条")
 
+    save_batch_size = 20  # 每20条保存一次
     results = []
-    batch_size = 50  # 每批处理50条
 
-    for i in range(start_idx, end_idx, batch_size):
-        batch_end = min(i + batch_size, end_idx)
-        print(f"  批次 {i+1}-{batch_end}...")
-
-        for idx in range(i, batch_end):
+    for idx in range(start_idx, end_idx):
+        try:
             row = df.iloc[idx]
+
+            # 显示进度
+            if (idx - start_idx + 1) % 5 == 0 or idx == start_idx:
+                print(f"  进度: {idx - start_idx + 1}/{end_idx - start_idx} (食谱 {idx+1})...", flush=True)
 
             # 分析食谱
             result = analyzer.analyze_recipe(row)
@@ -325,30 +332,44 @@ def process_recipes_in_range(df, start_idx, end_idx, analyzer, output_file):
                 'method': result.get('method', 'simulated')
             })
 
-            # 避免API限流
+            # 定期保存
+            if len(results) >= save_batch_size or idx == end_idx - 1:
+                # 更新DataFrame
+                for i, result in enumerate(results):
+                    df_idx = start_idx + idx - start_idx - len(results) + 1 + i
+                    df.at[df_idx, 'difficulty'] = result['difficulty']
+                    df.at[df_idx, 'suitable_constitutions'] = result['suitable_constitutions']
+                    df.at[df_idx, 'avoid_constitutions'] = result['avoid_constitutions']
+                    df.at[df_idx, 'efficacy_tags'] = result['efficacy_tags']
+                    df.at[df_idx, 'solar_terms'] = result['solar_terms']
+                    df.at[df_idx, 'confidence'] = result['confidence']
+                    df.at[df_idx, 'method'] = result['method']
+
+                # 保存
+                df.to_excel(output_file, index=False, engine='openpyxl')
+                results.clear()
+
+            # 避免API限流（AI模式）
             if analyzer.use_ai:
-                time.sleep(0.5)
+                time.sleep(0.3)
 
-    # 更新DataFrame
-    for i, result in enumerate(results):
-        df_idx = start_idx + i
-        df.at[df_idx, 'difficulty'] = result['difficulty']
-        df.at[df_idx, 'suitable_constitutions'] = result['suitable_constitutions']
-        df.at[df_idx, 'avoid_constitutions'] = result['avoid_constitutions']
-        df.at[df_idx, 'efficacy_tags'] = result['efficacy_tags']
-        df.at[df_idx, 'solar_terms'] = result['solar_terms']
-        df.at[df_idx, 'confidence'] = result['confidence']
-        df.at[df_idx, 'method'] = result['method']
+        except Exception as e:
+            print(f"  [ERROR] 食谱 {idx+1} 处理失败: {e}")
+            # 使用模拟模式作为备选
+            results.append({
+                'difficulty': '简单',
+                'suitable_constitutions': '["peace"]',
+                'avoid_constitutions': '[]',
+                'efficacy_tags': '[]',
+                'solar_terms': '[]',
+                'confidence': 30,
+                'method': 'fallback'
+            })
 
-    # 保存
-    df.to_excel(output_file, index=False, engine='openpyxl')
-    print(f"  [OK] 已保存到 {output_file}")
-
-    # 统计
-    avg_confidence = sum(r['confidence'] for r in results) / len(results)
-    ai_count = sum(1 for r in results if r['method'] == 'AI')
-    print(f"  平均置信度: {avg_confidence:.1f}%")
-    print(f"  AI分析: {ai_count} 条, 模拟分析: {len(results)-ai_count} 条")
+    # 最终统计
+    ai_count = (df.iloc[start_idx:end_idx]['method'] == 'AI').sum()
+    avg_conf = df.iloc[start_idx:end_idx]['confidence'].mean()
+    print(f"\n  [OK] 完成! 平均置信度: {avg_conf:.1f}%, AI分析: {ai_count} 条")
 
     return results
 
@@ -361,6 +382,7 @@ def main():
     parser.add_argument('--start', type=int, default=0, help='起始索引')
     parser.add_argument('--end', type=int, default=None, help='结束索引')
     parser.add_argument('--api-key', type=str, default=None, help='Anthropic API密钥')
+    parser.add_argument('--base-url', type=str, default=None, help='API基础URL（如智谱AI）')
     parser.add_argument('--batch-size', type=int, default=500, help='每批处理数量')
 
     args = parser.parse_args()
@@ -399,7 +421,7 @@ def main():
                 df = existing_df  # 使用已有数据继续
 
     # 初始化分析器
-    analyzer = AIRecipeAnalyzer(api_key=args.api_key)
+    analyzer = AIRecipeAnalyzer(api_key=args.api_key, base_url=args.base_url)
 
     # 添加新列（如果不存在）
     for col in ['difficulty', 'suitable_constitutions', 'avoid_constitutions',
