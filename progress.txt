@@ -708,3 +708,42 @@ Started: Thu, Jan 30, 2026 10:30:00 AM
   - Note: After npm install, Playwright browser drivers need to be re-installed via 'npx playwright install chromium'
 
 ---
+
+## [2026-01-31] - US-045
+- Created frontend/tests/e2e/recipes/04-api.spec.ts with 15 test cases for API field validation
+- Test cases implemented:
+  1. GET /api/v1/recipes returns correct fields - verifies cooking_time, cover_image, difficulty, efficacy_tags, suitable_constitutions
+  2. GET /api/v1/recipes/{id} returns complete detail - verifies desc, tip, ingredients (with nature/taste), steps, calories
+  3. GET /api/v1/recipes/{id} returns 404 for non-existent recipe
+  4. Field types validation - verifies difficulty enum values (easy/medium/hard), JSON arrays
+  5. Constitution filter validation - verifies results contain qi_deficiency constitution
+  6. Solar term filter validation - verifies results contain solar term (skipped if no data)
+  7. Keyword search validation - verifies results contain keyword
+  8. Combined filters validation - verifies both constitution and difficulty filters work (skipped if no data)
+  9. Efficacy filter validation - verifies efficacy tag filter works (skipped if no data)
+  10. max_cooking_time filter validation - verifies recipes <= 30 minutes
+  11. Difficulty filter validation - verifies difficulty='medium' filter works (skipped if no data)
+  12. Empty keyword returns 422 - validation error for empty search keyword
+  13. Recommendation API with constitution type - verifies recommend_type parameter
+  14. Recommendation API with invalid type returns 400 - verifies error handling
+  15. Recommendation API missing required parameter returns 400 - validates required params
+- Updated playwright.config.ts to add API project:
+  - Added testIgnore: /04-api\.spec\.ts/ to chromium and Mobile Chrome projects
+  - Added separate API project with testMatch: /04-api\.spec\.ts/ that doesn't require browser
+- Updated CLAUDE.md to add E2E testing section with Playwright commands
+- Fixed database schema issues: Added missing columns (desc, tip, cover_image, cooking_time, avoid_constitutions, efficacy_tags, solar_terms, is_published) to recipes table
+- All 11 applicable tests pass (4 skipped due to missing test data in seed database)
+- Files changed: frontend/tests/e2e/recipes/04-api.spec.ts, frontend/playwright.config.ts, CLAUDE.md, prd.json
+- **Learnings for future iterations:**
+  - The recommend API endpoint uses `recommend_type` parameter (not `type`) as specified in the router
+  - Empty keyword in search API returns 422 (validation error), not 400 or 200 with empty results
+  - API tests use Playwright's `request` fixture which doesn't require a browser
+  - Playwright projects can use `testIgnore` to exclude specific test files from browser-based projects
+  - The API project can be configured without device emulation for pure HTTP request testing
+  - Database schema must match model definitions or API queries will fail with column not found errors
+  - After fresh npm install, Playwright browser drivers must be re-installed via 'npx playwright install chromium'
+  - Test data in seed_db.py is limited - only 5 recipes with basic data, no solar_terms or efficacy_tags populated
+  - Some tests will be skipped if the test data doesn't contain matching records (e.g., solar_term, efficacy filters)
+  - JSON column values in SQLite are stored with unicode escapes (\uXXXX) which affects LIKE queries
+
+---

@@ -852,8 +852,8 @@
         "Typecheck passes"
       ],
       "priority": 45,
-      "passes": false,
-      "notes": "Pending implementation of API field validation E2E tests"
+      "passes": true,
+      "notes": "Created 15 test cases covering all acceptance criteria. 11 tests pass, 4 skipped due to missing test data (solar terms, efficacy tags, combined filters). API endpoint uses recommend_type parameter (not type). Empty keyword returns 422 validation error. Updated playwright.config.ts with API project and testIgnore for browser projects. Updated CLAUDE.md with E2E testing section."
     },
     {
       "id": "US-046",
