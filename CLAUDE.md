@@ -144,6 +144,38 @@ npm run build:h5
 npm run build:mp-weixin
 ```
 
+### E2E 测试 (Playwright)
+
+```bash
+# 进入前端目录
+cd frontend
+
+# 运行所有 E2E 测试
+npx playwright test
+
+# 运行特定测试文件
+npx playwright test 01-navigation
+
+# 运行特定项目
+npx playwright test --project=chromium
+npx playwright test --project=API
+
+# 运行测试并显示 UI 模式
+npx playwright test --ui
+
+# 查看测试报告
+npx playwright show-report
+
+# 安装 Playwright 浏览器（首次运行或更新后）
+npx playwright install chromium
+```
+
+**重要提示**:
+- E2E 测试需要后端服务器运行在 `http://localhost:8000`
+- API 测试项目使用 HTTP 请求，不依赖浏览器
+- 测试配置文件: `frontend/playwright.config.ts`
+- 测试文件目录: `frontend/tests/e2e/recipes/`
+
 ---
 
 ## 重要架构说明

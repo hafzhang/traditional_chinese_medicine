@@ -61,12 +61,23 @@ export default defineConfig({
     {
       name: 'chromium',
       use: { ...devices['Desktop Chrome'] },
+      testIgnore: /04-api\.spec\.ts/,
     },
 
     /* Test against mobile viewport */
     {
       name: 'Mobile Chrome',
       use: { ...devices['Pixel 5'] },
+      testIgnore: /04-api\.spec\.ts/,
+    },
+
+    /* API tests - no browser required, backend should be running separately */
+    {
+      name: 'API',
+      testMatch: /04-api\.spec\.ts/,
+      use: {},
+      // Don't use webServer for API tests
+      dependencies: [],
     },
   ],
 
