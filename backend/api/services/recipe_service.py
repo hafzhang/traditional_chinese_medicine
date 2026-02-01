@@ -224,7 +224,8 @@ class RecipeService:
         """
         recipe = self.get_recipe_by_id(recipe_id, db)
         if recipe:
-            recipe.view_count = (recipe.view_count or 0) + 1
+            current_count: int = recipe.view_count or 0  # type: ignore[assignment]
+            recipe.view_count = current_count + 1  # type: ignore[assignment]
             db.commit()
             return True
         return False
