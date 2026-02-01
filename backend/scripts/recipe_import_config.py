@@ -3,6 +3,8 @@
 定义字段映射关系和验证规则
 """
 
+import pandas as pd
+
 # Excel 列名到数据库字段的映射
 COLUMN_MAPPING = {
     # 基本信息映射
@@ -11,7 +13,8 @@ COLUMN_MAPPING = {
     'costtime': 'cooking_time',         # 烹饪时间字符串 -> cooking_time (需要解析)
     'QuantityIngredients': None,        # 食材用量 -> 单独处理
     'steptext': None,                   # 步骤文本 -> 单独处理
-    'tip': None,                        # 小贴士 -> 可选，暂不存储
+    'tip': 'tip',                       # 小贴士
+    'zid': 'zid',                       # 分类/分组ID
 
     # 新增字段映射
     'meal_type': 'meal_type',           # 餐次类型
@@ -22,12 +25,14 @@ COLUMN_MAPPING = {
     'solar_terms': 'solar_terms',        # 节气标签
     'servings': 'servings',              # 份量
     'cover_image': 'cover_image',        # 封面图片
+    'confidence': 'confidence',          # AI置信度分数
+    'method': 'cooking_method',          # 烹饪方法
 }
 
 # 枚举值定义
 ENUM_VALUES = {
     'meal_type': ['breakfast', 'lunch', 'dinner', 'snack', 'soup'],
-    'difficulty': ['easy', 'medium', 'hard'],
+    'difficulty': ['easy', 'medium', 'harder', 'hard'],
 }
 
 # 体质代码列表
@@ -73,6 +78,7 @@ MEAL_TYPE_CN_TO_CODE = {
 DIFFICULTY_CN_TO_CODE = {
     '简单': 'easy',
     '中等': 'medium',
+    '较难': 'harder',
     '困难': 'hard',
 }
 

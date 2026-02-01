@@ -174,7 +174,9 @@ class RecipeImporter:
                 # 创建菜谱
                 recipe = Recipe(
                     name=str(row['title']).strip(),
-                    description=str(row['desc']).strip() if not pd.isna(row['desc']) else None,
+                    zid=int(row['zid']) if 'zid' in row and not pd.isna(row['zid']) else None,
+                    description=str(row['desc']).strip() if 'desc' in row and not pd.isna(row['desc']) else None,
+                    tip=str(row['tip']).strip() if 'tip' in row and not pd.isna(row['tip']) else None,
                     meal_type=meal_type,
                     cooking_time=cooking_time,
                     difficulty=difficulty,
@@ -184,6 +186,8 @@ class RecipeImporter:
                     efficacy_tags=efficacy_tags,
                     solar_terms=solar_terms,
                     cover_image=row.get('cover_image') if not pd.isna(row.get('cover_image')) else None,
+                    confidence=float(row['confidence']) if 'confidence' in row and not pd.isna(row['confidence']) else None,
+                    cooking_method=str(row['method']).strip() if 'method' in row and not pd.isna(row['method']) else None,
                     is_published=True,
                     view_count=0
                 )
@@ -196,15 +200,16 @@ class RecipeImporter:
                     ingredients = parse_ingredients(row.get('QuantityIngredients'))
                     for ing in ingredients:
                         ing_id = self.get_ingredient_id(ing['name'])
-                        if ing_id:
-                            recipe_ing = RecipeIngredient(
-                                recipe_id=recipe.id,
-                                ingredient_id=ing_id,
-                                amount=ing['amount'],
-                                is_main=ing['is_main'],
-                                display_order=ing['display_order']
-                            )
-                            self.db.add(recipe_ing)
+                        # 创建 RecipeIngredient 记录，无论 ingredient_id 是否存在
+                        recipe_ing = RecipeIngredient(
+                            recipe_id=recipe.id,
+                            ingredient_id=ing_id,  # 可以为 None，如果食材不在库中
+                            ingredient_name=ing['name'],  # 保存食材名称
+                            amount=ing['amount'],
+                            is_main=ing['is_main'],
+                            display_order=ing['display_order']
+                        )
+                        self.db.add(recipe_ing)
 
                     # 解析并添加步骤
                     steps = parse_steps(row.get('steptext'))
