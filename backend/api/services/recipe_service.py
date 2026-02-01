@@ -153,7 +153,7 @@ class RecipeService:
                         "name": r.name,
                         "type": r.type,
                         "difficulty": r.difficulty,
-                        "cook_time": r.cook_time,
+                        "cooking_time": r.cooking_time or r.cook_time,  # PRD 字段，fallback 到旧字段
                         "image_url": r.image_url,
                         "reason": f"健脾养胃，适合早餐"
                     }
@@ -165,7 +165,7 @@ class RecipeService:
                         "name": r.name,
                         "type": r.type,
                         "difficulty": r.difficulty,
-                        "cook_time": r.cook_time,
+                        "cooking_time": r.cooking_time or r.cook_time,
                         "image_url": r.image_url,
                         "reason": "补充营养，提供能量"
                     }
@@ -177,7 +177,7 @@ class RecipeService:
                         "name": r.name,
                         "type": r.type,
                         "difficulty": r.difficulty,
-                        "cook_time": r.cook_time,
+                        "cooking_time": r.cooking_time or r.cook_time,
                         "image_url": r.image_url,
                         "reason": "清淡易消化，养心安神"
                     }

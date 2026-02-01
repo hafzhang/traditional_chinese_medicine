@@ -72,9 +72,10 @@ async def get_recipes(
                     "name": r.name,
                     "type": r.type,
                     "difficulty": r.difficulty,
-                    "cook_time": r.cook_time,
+                    "cooking_time": r.cooking_time or r.cook_time,  # PRD 字段，fallback 到旧字段
                     "servings": r.servings,
                     "image_url": r.image_url,
+                    "cover_image": getattr(r, 'cover_image', None),  # PRD 字段
                     "view_count": r.view_count
                 }
                 for r in recipes
@@ -107,17 +108,23 @@ async def get_recipe_detail(
             "name": recipe.name,
             "type": recipe.type,
             "difficulty": recipe.difficulty,
-            "cook_time": recipe.cook_time,
+            "cooking_time": recipe.cooking_time or recipe.cook_time,  # PRD 字段，fallback 到旧字段
             "servings": recipe.servings,
+            "desc": getattr(recipe, 'desc', None),  # PRD 字段
+            "tip": getattr(recipe, 'tip', None),  # PRD 字段
             "suitable_constitutions": recipe.suitable_constitutions,
+            "avoid_constitutions": getattr(recipe, 'avoid_constitutions', None),  # PRD 字段
             "symptoms": recipe.symptoms,
             "suitable_seasons": recipe.suitable_seasons,
+            "efficacy_tags": getattr(recipe, 'efficacy_tags', None),  # PRD 字段
+            "solar_terms": getattr(recipe, 'solar_terms', None),  # PRD 字段
             "ingredients": recipe.ingredients,
             "steps": recipe.steps,
             "efficacy": recipe.efficacy,
             "health_benefits": recipe.health_benefits,
             "precautions": recipe.precautions,
             "tags": recipe.tags,
+            "cover_image": getattr(recipe, 'cover_image', None),  # PRD 字段
             "image_url": recipe.image_url,
             "description": recipe.description,
             "view_count": recipe.view_count

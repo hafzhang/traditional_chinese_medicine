@@ -186,14 +186,22 @@ class Recipe(Base):
     __tablename__ = "recipes"
 
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
-    name = Column(String(100), nullable=False)
+    name = Column(String(200), nullable=False, unique=True, index=True)
     type = Column(String(50))  # 类型：粥类、汤类、茶饮、菜肴、主食、甜品小吃
-    difficulty = Column(String(20))  # 难度：简单、中等、困难
-    cook_time = Column(Integer)  # 烹饪时间（分钟）
+    difficulty = Column(String(20), index=True)  # 难度：简单、中等、困难 -> easy/medium/harder/hard
+    cook_time = Column(Integer, index=True)  # 烹饪时间（分钟）- 保留用于向后兼容
+    cooking_time = Column(Integer, index=True)  # 烹饪时间（分钟）- PRD 标准字段名
     servings = Column(Integer)  # 份量
 
+    # PRD 字段
+    desc = Column(Text)  # 个人体验/简介
+    tip = Column(Text)  # 烹饪贴士
+    cover_image = Column(String(255))  # 封面图片
+    zid = Column(Integer)  # 分类/分组ID
+
     # 体质关联（与现有系统对接）
-    suitable_constitutions = Column(JSON)  # 适用体质，如 ["qi_deficiency"]
+    suitable_constitutions = Column(JSON, index=True)  # 适用体质，如 ["qi_deficiency"]
+    avoid_constitutions = Column(JSON)  # 禁忌体质，如 ["phlegm_damp"]
     symptoms = Column(JSON)  # 主治症状，如 ["食欲不振", "疲劳乏力"]
     suitable_seasons = Column(JSON)  # 适用季节，如 ["春", "秋", "冬"]
 
@@ -203,8 +211,14 @@ class Recipe(Base):
 
     # 功效说明
     efficacy = Column(Text)  # 功效，如 "健脾养胃、补肺益气"
+    efficacy_tags = Column(JSON)  # 功效标签，如 ["健脾", "养胃"]
     health_benefits = Column(Text)  # 健康益处
     precautions = Column(Text)  # 注意事项
+
+    # PRD 新增字段
+    solar_terms = Column(JSON)  # 节气标签，如 ["立冬", "小雪"]
+    confidence = Column(Float)  # AI 置信度分数
+    is_published = Column(Boolean, default=True)  # 是否发布
 
     # 营养分析 (每份)
     calories = Column(Float, default=0)  # 热量 (kcal/份)
@@ -246,7 +260,7 @@ class Recipe(Base):
     recipe_ingredients = relationship("RecipeIngredient", back_populates="recipe", cascade="all, delete-orphan")
     recipe_steps = relationship("RecipeStep", back_populates="recipe", cascade="all, delete-orphan", order_by="RecipeStep.step_number")
 
-    created_at = Column(DateTime, server_default=func.now())
+    created_at = Column(DateTime, server_default=func.now(), index=True)
     updated_at = Column(DateTime, onupdate=func.now())
     is_deleted = Column(Boolean, default=False)
 
