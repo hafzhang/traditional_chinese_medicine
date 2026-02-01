@@ -3,7 +3,7 @@ Database Models
 数据库模型定义 - SQLite 兼容版本
 """
 
-from sqlalchemy import Column, String, Integer, Float, Boolean, DateTime, ForeignKey, Text, JSON
+from sqlalchemy import Column, String, Integer, Float, Boolean, DateTime, ForeignKey, Text, JSON, Index
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from sqlalchemy.dialects.postgresql import UUID
@@ -182,14 +182,15 @@ class Food(Base):
 
 
 class Recipe(Base):
-    """食谱库表 - Phase 1 更新版 + 营养分析版"""
+    """食谱库表 - Phase 1 更新版 + 营养分析版 + Excel导入增强版"""
     __tablename__ = "recipes"
 
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    zid = Column(Integer, index=True)  # Excel中的分类ID/分组ID
     name = Column(String(200), nullable=False, unique=True)  # 增加长度，添加唯一约束
     type = Column(String(50))  # 类型：粥类、汤类、茶饮、菜肴、主食、甜品小吃
     difficulty = Column(String(20))  # 难度：简单、中等、较难、困难
-    cook_time = Column(Integer)  # 烹饪时间（分钟）
+    cooking_time = Column(Integer)  # 烹饪时间（分钟）
     servings = Column(Integer)  # 份量
 
     # 体质关联（与现有系统对接）
@@ -207,6 +208,9 @@ class Recipe(Base):
     # 功效和节气标签
     efficacy_tags = Column(JSON)  # 功效标签，如 ["健脾", "养胃", "补气"]
     solar_terms = Column(JSON)  # 节气标签，如 ["春季", "立春"]
+
+    # AI处理相关字段
+    confidence = Column(Float)  # AI填充置信度分数 (0-100)
 
     # Note: 食材和步骤现在通过关联表存储（RecipeIngredient, RecipeStep）
 
@@ -257,6 +261,15 @@ class Recipe(Base):
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, onupdate=func.now())
     is_deleted = Column(Boolean, default=False)
+
+    # Indexes for common queries
+    __table_args__ = (
+        Index('ix_recipes_difficulty', 'difficulty'),
+        Index('ix_recipes_meal_type', 'meal_type'),
+        Index('ix_recipes_type', 'type'),
+        Index('ix_recipes_is_published', 'is_published'),
+        Index('ix_recipes_is_deleted', 'is_deleted'),
+    )
 
 
 class RecipeIngredient(Base):
