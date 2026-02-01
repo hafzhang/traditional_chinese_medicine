@@ -242,9 +242,48 @@ class Recipe(Base):
     rating = Column(Float, default=0)  # 评分
     review_count = Column(Integer, default=0)  # 评论数
 
+    # Relationships
+    recipe_ingredients = relationship("RecipeIngredient", back_populates="recipe", cascade="all, delete-orphan")
+    recipe_steps = relationship("RecipeStep", back_populates="recipe", cascade="all, delete-orphan", order_by="RecipeStep.step_number")
+
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, onupdate=func.now())
     is_deleted = Column(Boolean, default=False)
+
+
+class RecipeIngredient(Base):
+    """食谱食材关联表"""
+    __tablename__ = "recipe_ingredients"
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    recipe_id = Column(String(36), ForeignKey("recipes.id"), nullable=False, index=True)
+    ingredient_id = Column(String(36), ForeignKey("ingredients.id"), nullable=True)  # 可选，如果食材不在库中
+    ingredient_name = Column(String(100), nullable=False)  # 食材名称（冗余字段，用于查询）
+    amount = Column(String(50))  # 用量，如 "50g", "2个", "适量"
+    is_main = Column(Boolean, default=False)  # 是否主料
+    display_order = Column(Integer, default=0)  # 显示顺序
+
+    # Relationships
+    recipe = relationship("Recipe", back_populates="recipe_ingredients")
+    ingredient = relationship("Ingredient")
+
+    created_at = Column(DateTime, server_default=func.now())
+
+
+class RecipeStep(Base):
+    """食谱制作步骤表"""
+    __tablename__ = "recipe_steps"
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    recipe_id = Column(String(36), ForeignKey("recipes.id"), nullable=False, index=True)
+    step_number = Column(Integer, nullable=False)  # 步骤编号
+    description = Column(Text, nullable=False)  # 步骤描述
+    duration = Column(Integer)  # 该步骤预计时长（分钟）
+
+    # Relationships
+    recipe = relationship("Recipe", back_populates="recipe_steps")
+
+    created_at = Column(DateTime, server_default=func.now())
 
 
 class ConstitutionInfo(Base):
