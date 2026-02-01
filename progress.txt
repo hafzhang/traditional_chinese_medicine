@@ -24,11 +24,31 @@
   - Recipe, RecipeIngredient, RecipeStep all created properly
   - 0 failures in test run
 
-## Current Work:
-- Ready to proceed with US-010: Run full import (12,785 recipes)
+## Completed Stories (US-001 through US-010):
+- US-001: Database models created (Recipe, RecipeIngredient, RecipeStep)
+- US-002: Composite unique indexes added
+- US-003: Pydantic schemas created
+- US-004: Database initialization fixed
+- US-005: Import config and parsing functions added
+- US-006: Recipe service layer implemented
+- US-007: Recipe API router implemented
+- US-008: **Import script for AI-filled Excel completed**
+  - Fixed: zid/cid columns contain Chinese text (not numeric), set to None
+  - Fixed: No servings column in Excel, set default to 2
+  - Fixed: JSON fields now use parse_json_field() for correct parsing
+  - suitable_constitutions, avoid_constitutions, efficacy_tags all parse correctly
+- US-009: **Import tested with 50 recipes - all successful**
+  - Verified JSON arrays parse correctly
+  - Recipe, RecipeIngredient, RecipeStep all created properly
+  - 0 failures in test run
+- US-010: **Full import completed successfully**
+  - Successfully imported 12,784 recipes (1 row had no title, excluded)
+  - Database contains: 12,784 Recipes, 88,764 RecipeIngredients, 83,075 RecipeSteps
+  - 100% of recipes have AI-filled fields (suitable_constitutions, efficacy_tags, solar_terms)
+  - 0 NULL values in key fields (name, difficulty, cooking_time)
+  - Difficulty distribution: easy(6,114), medium(4,828), harder(1,635), hard(207)
 
 ## Pending Stories:
-- US-010: Run full import and verify results
 - US-011: Add comprehensive query tests
 - US-012: Typecheck passes
 
