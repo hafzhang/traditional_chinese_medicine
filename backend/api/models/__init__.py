@@ -3,7 +3,7 @@ Database Models
 数据库模型定义 - SQLite 兼容版本
 """
 
-from sqlalchemy import Column, String, Integer, Float, Boolean, DateTime, ForeignKey, Text, JSON
+from sqlalchemy import Column, String, Integer, Float, Boolean, DateTime, ForeignKey, Text, JSON, UniqueConstraint, Index
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from sqlalchemy.dialects.postgresql import UUID
@@ -268,13 +268,18 @@ class Recipe(Base):
 class RecipeIngredient(Base):
     """食谱食材关联表"""
     __tablename__ = "recipe_ingredients"
+    __table_args__ = (
+        # Composite unique index for (recipe_id, ingredient_id)
+        # Note: ingredient_id can be NULL, so we use Index instead of UniqueConstraint
+        Index('uq_recipe_ingredient', 'recipe_id', 'ingredient_id', unique=True),
+    )
 
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     recipe_id = Column(String(36), ForeignKey("recipes.id"), nullable=False, index=True)
     ingredient_id = Column(String(36), ForeignKey("ingredients.id"), nullable=True)  # 可选，如果食材不在库中
     ingredient_name = Column(String(100), nullable=False)  # 食材名称（冗余字段，用于查询）
     amount = Column(String(50))  # 用量，如 "50g", "2个", "适量"
-    is_main = Column(Boolean, default=False)  # 是否主料
+    is_main = Column(Boolean, default=False)  # 是否主料 (PRD: is_primary)
     display_order = Column(Integer, default=0)  # 显示顺序
 
     # Relationships
@@ -287,6 +292,9 @@ class RecipeIngredient(Base):
 class RecipeStep(Base):
     """食谱制作步骤表"""
     __tablename__ = "recipe_steps"
+    __table_args__ = (
+        UniqueConstraint('recipe_id', 'step_number', name='uq_recipe_step'),
+    )
 
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     recipe_id = Column(String(36), ForeignKey("recipes.id"), nullable=False, index=True)
