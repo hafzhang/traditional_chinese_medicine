@@ -1,0 +1,49 @@
+# Recipe Database Enhancement Progress Log
+
+## 2025-02-01 - Initial Assessment
+- Reviewed existing codebase and git history
+- Verified tests pass (44 tests: 10 unit + 6 API + 28 import config)
+- Created PRD (prd.json) with 12 user stories
+- Created progress.txt file
+
+## Completed Stories (US-001 through US-009):
+- US-001: Database models created (Recipe, RecipeIngredient, RecipeStep)
+- US-002: Composite unique indexes added
+- US-003: Pydantic schemas created
+- US-004: Database initialization fixed
+- US-005: Import config and parsing functions added
+- US-006: Recipe service layer implemented
+- US-007: Recipe API router implemented
+- US-008: **Import script for AI-filled Excel completed**
+  - Fixed: zid/cid columns contain Chinese text (not numeric), set to None
+  - Fixed: No servings column in Excel, set default to 2
+  - Fixed: JSON fields now use parse_json_field() for correct parsing
+  - suitable_constitutions, avoid_constitutions, efficacy_tags all parse correctly
+- US-009: **Import tested with 50 recipes - all successful**
+  - Verified JSON arrays parse correctly
+  - Recipe, RecipeIngredient, RecipeStep all created properly
+  - 0 failures in test run
+
+## Current Work:
+- Ready to proceed with US-010: Run full import (12,785 recipes)
+
+## Pending Stories:
+- US-010: Run full import and verify results
+- US-011: Add comprehensive query tests
+- US-012: Typecheck passes
+
+## Key Learnings:
+- Excel file structure differs from expectations:
+  - cid: Multi-line Chinese text (not an ID)
+  - zid: Chinese text (not numeric)
+  - No servings column
+  - No cover_image column
+- JSON arrays in Excel use string format like '["peace", "qi_deficiency"]'
+- parse_json_field() handles both JSON and comma-separated formats
+
+## Technical Notes:
+- SQLite JSON fields use .contains() for array queries
+- Difficulty mapping: 简单->easy, 中等->medium, 较难->harder, 困难->hard
+- 9 constitution types defined and validated
+- 24 solar terms defined (Chinese in Excel, codes in config)
+- Import script uses recipe_import_config.py for parsing

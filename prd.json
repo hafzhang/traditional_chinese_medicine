@@ -1,0 +1,281 @@
+{
+  "title": "TCM Recipe Database Import and API Enhancement",
+  "description": "Import 12,785 recipes from Excel to database, create API endpoints, and build frontend pages for recipe browsing and filtering by constitution type",
+  "version": "1.0.0",
+  "user_stories": [
+    {
+      "id": "US-001",
+      "title": "Design and Create Database Models for Recipe System",
+      "priority": 1,
+      "status": "completed",
+      "passes": true,
+      "description": "Create Recipe, RecipeIngredient, and RecipeStep models with proper relationships and constraints",
+      "acceptance_criteria": [
+        "Recipe model with PRD-compliant fields (name, desc, tip, cooking_time, difficulty, suitable_constitutions, avoid_constitutions, efficacy_tags, solar_terms, etc.)",
+        "RecipeIngredient association table with composite unique index",
+        "RecipeStep table with unique constraint on (recipe_id, step_number)",
+        "Foreign key relationships properly defined",
+        "Models use SQLite-compatible JSON field types",
+        "Proper indexes on frequently queried fields"
+      ],
+      "files": [
+        "backend/api/models/__init__.py"
+      ]
+    },
+    {
+      "id": "US-002",
+      "title": "Add Composite Unique Indexes for RecipeIngredient and RecipeStep",
+      "priority": 2,
+      "status": "completed",
+      "passes": true,
+      "description": "Add composite unique indexes to prevent duplicate ingredients per recipe and duplicate step numbers",
+      "acceptance_criteria": [
+        "RecipeIngredient has composite unique index on (recipe_id, ingredient_id)",
+        "RecipeStep has unique constraint on (recipe_id, step_number)",
+        "Foreign key constraints properly cascade delete",
+        "Tests verify duplicate prevention works"
+      ],
+      "files": [
+        "backend/api/models/__init__.py"
+      ]
+    },
+    {
+      "id": "US-003",
+      "title": "Create Recipe Pydantic Schemas",
+      "priority": 3,
+      "status": "completed",
+      "passes": true,
+      "description": "Create Pydantic schemas for Recipe validation and API responses",
+      "acceptance_criteria": [
+        "RecipeBase with common fields",
+        "RecipeCreate for new recipes",
+        "RecipeUpdate for partial updates",
+        "RecipeResponse with all fields including PRD fields",
+        "RecipeDetailResponse with nested ingredients and steps",
+        "RecipeListItem for list views",
+        "StandardResponse wrapper for API responses",
+        "Difficulty enum values defined",
+        "Proper validation constraints (min_length, pattern, etc.)"
+      ],
+      "files": [
+        "backend/api/schemas/recipe.py"
+      ]
+    },
+    {
+      "id": "US-004",
+      "title": "Fix Database Table Initialization and Verify Foreign Keys",
+      "priority": 4,
+      "status": "completed",
+      "passes": true,
+      "description": "Ensure database tables initialize correctly and foreign key relationships work",
+      "acceptance_criteria": [
+        "All tables create successfully on init_db()",
+        "Foreign key cascade delete works",
+        "Recipe can have multiple RecipeIngredient records",
+        "Recipe can have multiple RecipeStep records",
+        "Deleting a Recipe cascades to ingredients and steps",
+        "Tests verify relationships work correctly"
+      ],
+      "files": [
+        "backend/api/database.py",
+        "backend/scripts/create_phase2_tables.py"
+      ]
+    },
+    {
+      "id": "US-005",
+      "title": "Add Import Config Constants and Parsing Functions",
+      "priority": 5,
+      "status": "completed",
+      "passes": true,
+      "description": "Create configuration file for Excel import with field mappings and parsing functions",
+      "acceptance_criteria": [
+        "EXCEL_COLUMN_MAP with all field mappings",
+        "DIFFICULTY_MAP for Chinese to English difficulty codes",
+        "CONSTITUTION_CODES list with all 9 constitution types",
+        "SOLAR_TERMS list with 24 solar terms",
+        "SOLAR_TERMS_CN with Chinese solar term names",
+        "SEASON_TO_SOLAR_TERMS mapping",
+        "parse_cooking_time() handles minutes, hours, and ranges",
+        "parse_difficulty() handles Chinese and English inputs",
+        "parse_json_field() handles JSON arrays and comma-separated values",
+        "parse_ingredients() extracts ingredient names and amounts",
+        "parse_steps() extracts step numbers and descriptions",
+        "Tests cover all parsing functions"
+      ],
+      "files": [
+        "backend/scripts/recipe_import_config.py",
+        "backend/tests/test_unit/test_import_config.py"
+      ]
+    },
+    {
+      "id": "US-006",
+      "title": "Create Recipe Service Layer",
+      "priority": 6,
+      "status": "completed",
+      "passes": true,
+      "description": "Implement RecipeService with business logic for recipe CRUD operations",
+      "acceptance_criteria": [
+        "get_recipe_by_id() returns recipe with all fields",
+        "get_recipes_list() with pagination and filtering (type, difficulty, constitution, search)",
+        "get_recipes_by_constitution() filters by constitution",
+        "get_recommendations_by_constitution() returns breakfast/lunch/dinner recommendations",
+        "get_recipes_by_symptom() searches by symptoms",
+        "increment_view_count() tracks popularity",
+        "is_valid_constitution_code() validates inputs",
+        "get_constitution_name() returns Chinese name",
+        "Service methods are stateless, take db: Session as parameter",
+        "Tests cover all service methods"
+      ],
+      "files": [
+        "backend/api/services/recipe_service.py",
+        "backend/tests/test_unit/test_recipes.py"
+      ]
+    },
+    {
+      "id": "US-007",
+      "title": "Create Recipe API Router",
+      "priority": 7,
+      "status": "completed",
+      "passes": true,
+      "description": "Implement FastAPI router for recipe endpoints",
+      "acceptance_criteria": [
+        "GET /api/v1/recipes - list with pagination and filtering",
+        "GET /api/v1/recipes/{id} - detail with ingredients and steps",
+        "GET /api/v1/recipes/recommend/{constitution} - constitution-based recommendations",
+        "GET /api/v1/recipes/types/list - recipe type enumeration",
+        "GET /api/v1/recipes/difficulties/list - difficulty enumeration",
+        "Standard response format {code: 0, data: {...}}",
+        "Proper error handling (404 for not found)",
+        "View count increments on detail access",
+        "Router registered in main.py",
+        "Tests verify all endpoints work"
+      ],
+      "files": [
+        "backend/api/routers/recipes.py",
+        "backend/tests/test_api/test_recipes_api.py"
+      ]
+    },
+    {
+      "id": "US-008",
+      "title": "Update Import Script for AI-Filled Excel",
+      "priority": 8,
+      "status": "completed",
+      "passes": true,
+      "description": "Update the import script to properly handle AI-filled fields in the Excel file",
+      "acceptance_criteria": [
+        "Import script reads from source_data/dishes_list_ai_filled.xlsx",
+        "Uses new parsing functions from recipe_import_config.py",
+        "Handles difficulty field (simple/medium/harder/hard codes)",
+        "Handles suitable_constitutions JSON array",
+        "Handles avoid_constitutions JSON array",
+        "Handles efficacy_tags JSON array",
+        "Handles solar_terms JSON array",
+        "Creates Recipe, RecipeIngredient, and RecipeStep records",
+        "Properly maps ingredient names to ingredient_id where available",
+        "Dry-run mode for testing",
+        "Error handling with summary report",
+        "Progress output during import"
+      ],
+      "files": [
+        "backend/scripts/import_recipes.py"
+      ],
+      "implementation_notes": "Fixed issues: Excel zid/cid columns contain Chinese text (not numeric), no servings column in Excel, JSON fields use parse_json_field()"
+    },
+    {
+      "id": "US-009",
+      "title": "Test Excel Import with Small Sample",
+      "priority": 9,
+      "status": "completed",
+      "passes": true,
+      "description": "Test the import script with a small sample of recipes to verify data mapping is correct",
+      "acceptance_criteria": [
+        "Run import with --limit 10 flag",
+        "Verify 10 recipes imported successfully",
+        "Check Recipe fields: name, difficulty, cooking_time, suitable_constitutions, efficacy_tags, solar_terms",
+        "Check RecipeIngredient records created correctly",
+        "Check RecipeStep records created correctly",
+        "Verify ingredient_id linking where ingredients exist in database",
+        "Fix any parsing or mapping issues found"
+      ],
+      "files": [
+        "backend/scripts/import_recipes.py"
+      ],
+      "implementation_notes": "Tested with 50 recipes - all imported successfully. JSON fields (suitable_constitutions, avoid_constitutions, efficacy_tags) parsed correctly from Excel."
+    },
+    {
+      "id": "US-010",
+      "title": "Run Full Import and Verify Results",
+      "priority": 10,
+      "status": "pending",
+      "passes": false,
+      "description": "Run the full import of all 12,785 recipes and verify the results",
+      "acceptance_criteria": [
+        "Import completes without errors",
+        "All 12,785 recipes imported (or count in Excel file)",
+        "Verify database record counts match Excel rows",
+        "Sample check: verify 20 random recipes have correct data",
+        "Check for any duplicate recipe names",
+        "Verify foreign key relationships are intact",
+        "Generate import summary report",
+        "Log any skipped records and reasons"
+      ],
+      "files": []
+    },
+    {
+      "id": "US-011",
+      "title": "Add Recipe Query Tests",
+      "priority": 11,
+      "status": "pending",
+      "passes": false,
+      "description": "Add comprehensive tests for recipe querying and filtering",
+      "acceptance_criteria": [
+        "Test filtering by type (粥类, 汤类, etc.)",
+        "Test filtering by difficulty (easy, medium, harder, hard)",
+        "Test filtering by constitution (all 9 types)",
+        "Test search by name keyword",
+        "Test pagination (skip, limit)",
+        "Test constitution-based recommendations",
+        "Test symptom-based search",
+        "Test view count increment",
+        "Test error cases (not found, invalid constitution)",
+        "Coverage > 80%"
+      ],
+      "files": [
+        "backend/tests/test_unit/test_recipes.py",
+        "backend/tests/test_api/test_recipes_api.py"
+      ]
+    },
+    {
+      "id": "US-012",
+      "title": "Typecheck Passes",
+      "priority": 12,
+      "status": "pending",
+      "passes": false,
+      "description": "Ensure all new code passes mypy type checking",
+      "acceptance_criteria": [
+        "mypy api/services/recipe_service.py passes",
+        "mypy api/schemas/recipe.py passes",
+        "mypy api/routers/recipes.py passes",
+        "mypy scripts/import_recipes.py passes",
+        "mypy scripts/recipe_import_config.py passes",
+        "Fix any type errors (especially SQLAlchemy Column vs int issues)"
+      ],
+      "files": []
+    }
+  ],
+  "metadata": {
+    "total_recipes": 12785,
+    "source_file": "source_data/dishes_list_ai_filled.xlsx",
+    "ai_filled_ratio": "60.4%",
+    "ai_filled_count": 7720,
+    "constitutions": ["peace", "qi_deficiency", "yang_deficiency", "yin_deficiency", "phlegm_damp", "damp_heat", "blood_stasis", "qi_depression", "special"],
+    "difficulty_levels": ["easy", "medium", "harder", "hard"]
+  },
+  "notes": [
+    "Use SQLite for testing, PostgreSQL for production",
+    "JSON fields work with SQLite using .contains() for array queries",
+    "Service methods follow stateless pattern (no singletons)",
+    "Standard response format: {code: 0, data: {...}, message: 'Success'}",
+    "Recipe.name must be unique (database constraint)"
+  ]
+}

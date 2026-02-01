@@ -24,7 +24,9 @@ try:
         COLUMN_MAPPING, ENUM_VALUES, CONSTITUTION_CODES,
         EFFICACY_TAGS, SOLAR_TERMS, MEAL_TYPE_CN_TO_CODE,
         DIFFICULTY_CN_TO_CODE, CONSTITUTION_CN_TO_CODE,
-        parse_cooking_time, parse_ingredients, parse_steps, parse_tags
+        parse_cooking_time, parse_ingredients, parse_steps, parse_tags,
+        parse_difficulty as parse_difficulty_value,  # Use the config function
+        parse_json_field  # Import the JSON field parser
     )
     print("[OK] 导入配置文件成功")
 except ImportError as e:
@@ -69,11 +71,17 @@ class RecipeImporter:
         # 这里选择返回 None，后续记录错误
         return None
 
-    def parse_constitutions(self, value: str) -> list:
-        """解析体质标签（中文转代码）"""
+    def parse_constitutions(self, value) -> list:
+        """解析体质标签（JSON数组或中文转代码）"""
         if pd.isna(value) or not value:
             return []
 
+        # First try to parse as JSON array
+        result = parse_json_field(value)
+        if result:
+            return result
+
+        # Fallback to Chinese-to-code mapping
         tags = str(value).replace('，', ',').replace('、', ',').split(',')
         codes = []
         for tag in tags:
@@ -82,7 +90,7 @@ class RecipeImporter:
                 codes.append(CONSTITUTION_CN_TO_CODE[tag])
             elif tag in CONSTITUTION_CODES:
                 codes.append(tag)
-        return codes
+        return codes if codes else []
 
     def parse_meal_type(self, value: str) -> str:
         """解析餐次类型（中文转代码）"""
@@ -113,23 +121,21 @@ class RecipeImporter:
             return 'soup'
         return 'dinner'
 
-    def parse_difficulty(self, value: str, cooking_time: int) -> str:
-        """解析难度等级"""
-        if pd.isna(value) or not value:
-            # 根据烹饪时间推测
+    def parse_difficulty(self, value: str, cooking_time: int = 30) -> str:
+        """解析难度等级 - wrapper for config function"""
+        # Use the imported parse_difficulty_value function
+        result = parse_difficulty_value(value)
+        if result is None:
+            # Fallback: estimate from cooking time
             if cooking_time <= 30:
                 return 'easy'
             elif cooking_time <= 60:
                 return 'medium'
+            elif cooking_time <= 120:
+                return 'harder'
             else:
                 return 'hard'
-
-        value = str(value).strip()
-        if value in DIFFICULTY_CN_TO_CODE:
-            return DIFFICULTY_CN_TO_CODE[value]
-        if value in ENUM_VALUES['difficulty']:
-            return value
-        return 'easy'  # 默认
+        return result
 
     def import_recipes(self, df: pd.DataFrame, dry_run: bool = False):
         """导入菜谱"""
@@ -159,23 +165,24 @@ class RecipeImporter:
                 suitable_constitutions = self.parse_constitutions(row.get('suitable_constitutions'))
                 avoid_constitutions = self.parse_constitutions(row.get('avoid_constitutions'))
 
-                # 解析标签
-                efficacy_tags = None
-                if 'efficacy_tags' in row and not pd.isna(row['efficacy_tags']):
-                    efficacy_tags = parse_tags(str(row['efficacy_tags']), EFFICACY_TAGS)
-                    if not efficacy_tags:
-                        efficacy_tags = None
+                # 解析标签 - use parse_json_field for JSON arrays
+                efficacy_tags = parse_json_field(row.get('efficacy_tags'))
+                # Filter to only valid tags if needed, or keep all
+                # For now, keep whatever is in the Excel since efficacy_tags may contain Chinese values
 
-                solar_terms = None
-                if 'solar_terms' in row and not pd.isna(row['solar_terms']):
-                    solar_terms = parse_tags(str(row['solar_terms']), SOLAR_TERMS)
+                solar_terms = parse_json_field(row.get('solar_terms'))
+                # Filter to only valid solar terms
+                if solar_terms:
+                    solar_terms = [s for s in solar_terms if s in SOLAR_TERMS]
                     if not solar_terms:
                         solar_terms = None
 
                 # 创建菜谱
                 recipe = Recipe(
                     name=str(row['title']).strip(),
-                    zid=int(row['zid']) if 'zid' in row and not pd.isna(row['zid']) else None,
+                    # zid: Excel's zid contains Chinese text, not numeric IDs - skip it
+                    # cid: Excel's cid contains multi-line text, not IDs - skip it
+                    zid=None,  # No valid numeric ID in Excel
                     description=str(row['desc']).strip() if 'desc' in row and not pd.isna(row['desc']) else None,
                     desc=str(row['desc']).strip() if 'desc' in row and not pd.isna(row['desc']) else None,  # PRD 字段
                     tip=str(row['tip']).strip() if 'tip' in row and not pd.isna(row['tip']) else None,
@@ -183,12 +190,12 @@ class RecipeImporter:
                     cook_time=cooking_time,  # 向后兼容字段
                     cooking_time=cooking_time,  # PRD 标准字段
                     difficulty=difficulty,
-                    servings=int(row.get('servings', 2)) if not pd.isna(row.get('servings')) else 2,
+                    servings=2,  # Default value since Excel doesn't have servings column
                     suitable_constitutions=suitable_constitutions,
                     avoid_constitutions=avoid_constitutions,
                     efficacy_tags=efficacy_tags,
                     solar_terms=solar_terms,
-                    cover_image=row.get('cover_image') if 'cover_image' in row and not pd.isna(row.get('cover_image')) else None,
+                    cover_image=None,  # No cover_image column in Excel
                     confidence=float(row['confidence']) if 'confidence' in row and not pd.isna(row['confidence']) else None,
                     cooking_method=str(row['method']).strip() if 'method' in row and not pd.isna(row['method']) else None,
                     is_published=True,
