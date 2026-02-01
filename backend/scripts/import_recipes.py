@@ -1,6 +1,7 @@
 """
 菜谱导入脚本
-从 source_data/ingredients_list.xlsx 导入菜谱数据到数据库
+从 source_data/dishes_list_ai_filled.xlsx 导入菜谱数据到数据库
+支持 AI 填充的字段: difficulty, constitutions, efficacy_tags, solar_terms
 """
 
 import sys
@@ -25,9 +26,9 @@ try:
         DIFFICULTY_CN_TO_CODE, CONSTITUTION_CN_TO_CODE,
         parse_cooking_time, parse_ingredients, parse_steps, parse_tags
     )
-    print("✓ 导入配置文件成功")
+    print("[OK] 导入配置文件成功")
 except ImportError as e:
-    print(f"✗ 导入配置文件失败: {e}")
+    print(f"[ERROR] 导入配置文件失败: {e}")
     sys.exit(1)
 
 
@@ -148,7 +149,7 @@ class RecipeImporter:
                 if existing:
                     self.stats['skipped'] += 1
                     if self.stats['skipped'] <= 5:
-                        print(f"⊘ 跳过 (已存在): {row['title']}")
+                        print(f"[SKIP] 跳过 (已存在): {row['title']}")
                     continue
 
                 # 解析数据
@@ -174,7 +175,9 @@ class RecipeImporter:
                 # 创建菜谱
                 recipe = Recipe(
                     name=str(row['title']).strip(),
-                    description=str(row['desc']).strip() if not pd.isna(row['desc']) else None,
+                    zid=int(row['zid']) if 'zid' in row and not pd.isna(row['zid']) else None,
+                    description=str(row['desc']).strip() if 'desc' in row and not pd.isna(row['desc']) else None,
+                    tip=str(row['tip']).strip() if 'tip' in row and not pd.isna(row['tip']) else None,
                     meal_type=meal_type,
                     cooking_time=cooking_time,
                     difficulty=difficulty,
@@ -184,6 +187,8 @@ class RecipeImporter:
                     efficacy_tags=efficacy_tags,
                     solar_terms=solar_terms,
                     cover_image=row.get('cover_image') if not pd.isna(row.get('cover_image')) else None,
+                    confidence=float(row['confidence']) if 'confidence' in row and not pd.isna(row['confidence']) else None,
+                    cooking_method=str(row['method']).strip() if 'method' in row and not pd.isna(row['method']) else None,
                     is_published=True,
                     view_count=0
                 )
@@ -196,15 +201,16 @@ class RecipeImporter:
                     ingredients = parse_ingredients(row.get('QuantityIngredients'))
                     for ing in ingredients:
                         ing_id = self.get_ingredient_id(ing['name'])
-                        if ing_id:
-                            recipe_ing = RecipeIngredient(
-                                recipe_id=recipe.id,
-                                ingredient_id=ing_id,
-                                amount=ing['amount'],
-                                is_main=ing['is_main'],
-                                display_order=ing['display_order']
-                            )
-                            self.db.add(recipe_ing)
+                        # 创建 RecipeIngredient 记录，无论 ingredient_id 是否存在
+                        recipe_ing = RecipeIngredient(
+                            recipe_id=recipe.id,
+                            ingredient_id=ing_id,  # 可以为 None，如果食材不在库中
+                            ingredient_name=ing['name'],  # 保存食材名称
+                            amount=ing['amount'],
+                            is_main=ing['is_main'],
+                            display_order=ing['display_order']
+                        )
+                        self.db.add(recipe_ing)
 
                     # 解析并添加步骤
                     steps = parse_steps(row.get('steptext'))
@@ -221,14 +227,14 @@ class RecipeImporter:
 
                 self.stats['success'] += 1
                 if self.stats['success'] <= 10 or self.stats['success'] % 100 == 0:
-                    print(f"✓ 导入成功 ({self.stats['success']}): {row['title'][:30]}...")
+                    print(f"[OK] 导入成功 ({self.stats['success']}): {row['title'][:30]}...")
 
             except Exception as e:
                 self.stats['failed'] += 1
-                error_msg = f"{row['title']}: {str(e)}"
+                error_msg = f"{row.get('title', 'Unknown')}: {str(e)}"
                 self.stats['errors'].append(error_msg)
                 if self.stats['failed'] <= 5:
-                    print(f"✗ 导入失败: {error_msg}")
+                    print(f"[ERROR] 导入失败: {error_msg}")
                 self.db.rollback()
 
     def print_summary(self):
@@ -253,24 +259,32 @@ def main():
     import argparse
 
     parser = argparse.ArgumentParser(description='导入菜谱数据')
-    parser.add_argument('--file', default='source_data/ingredients_list.xlsx', help='Excel 文件路径')
+    parser.add_argument('--file', default='../source_data/dishes_list_ai_filled.xlsx', help='Excel 文件路径')
     parser.add_argument('--dry-run', action='store_true', help='模拟运行，不实际导入')
     parser.add_argument('--limit', type=int, help='限制导入数量（测试用）')
     args = parser.parse_args()
 
     # 检查文件是否存在
     if not os.path.exists(args.file):
-        print(f"✗ 文件不存在: {args.file}")
-        sys.exit(1)
+        print(f"文件不存在: {args.file}")
+        # 尝试相对于脚本目录的路径
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        alt_path = os.path.join(script_dir, args.file)
+        if not os.path.exists(alt_path):
+            print(f"尝试备用路径: {alt_path}")
+            print(f"文件不存在: {alt_path}")
+            sys.exit(1)
+        args.file = alt_path
 
     print(f"读取文件: {args.file}")
 
-    # 读取 Excel
+    # 读取 Excel - 使用 engine='openpyxl' 以获得更好的兼容性
     try:
-        df = pd.read_excel(args.file, sheet_name='Sheet1')
-        print(f"✓ 成功读取 {len(df)} 条记录")
+        df = pd.read_excel(args.file, sheet_name='Sheet1', engine='openpyxl')
+        print(f"[OK] 成功读取 {len(df)} 条记录")
+        print(f"[INFO] 列名: {list(df.columns)[:10]}...")  # 只显示前10列
     except Exception as e:
-        print(f"✗ 读取 Excel 失败: {e}")
+        print(f"[ERROR] 读取 Excel 失败: {e}")
         sys.exit(1)
 
     # 限制数量（测试用）
