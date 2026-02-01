@@ -1,0 +1,1950 @@
+{
+  "metadata": {
+    "title": "中医养生菜谱功能",
+    "version": "11.0.0",
+    "lastUpdated": "2026-01-31",
+    "totalStories": 75,
+    "completedStories": 6,
+    "description": "Excel导入版 - 12,785条菜谱数据导入和展示功能",
+    "prdFile": "tasks/prd-recipes.md",
+    "ralphCompatible": true
+  },
+  "phases": [
+    {
+      "id": 1,
+      "name": "数据模型",
+      "priorityRange": "1-8",
+      "description": "创建Recipe相关数据模型和Schema"
+    },
+    {
+      "id": 2,
+      "name": "导入配置基础",
+      "priorityRange": "9-13",
+      "description": "创建Excel导入配置和解析函数"
+    },
+    {
+      "id": 3,
+      "name": "导入解析函数",
+      "priorityRange": "13-14",
+      "description": "实现食材和步骤解析函数"
+    },
+    {
+      "id": 4,
+      "name": "导入脚本核心",
+      "priorityRange": "15-23",
+      "description": "实现Excel导入脚本"
+    },
+    {
+      "id": 5,
+      "name": "服务层",
+      "priorityRange": "24-31",
+      "description": "创建RecipeService业务逻辑层"
+    },
+    {
+      "id": 6,
+      "name": "CRUD和验证层",
+      "priorityRange": "32-48",
+      "description": "实现CRUD操作和验证逻辑"
+    },
+    {
+      "id": 7,
+      "name": "API路由层",
+      "priorityRange": "49-55",
+      "description": "创建菜谱API路由"
+    },
+    {
+      "id": 8,
+      "name": "前端功能",
+      "priorityRange": "56-62",
+      "description": "实现前端列表和详情页面"
+    },
+    {
+      "id": 9,
+      "name": "数据导入执行",
+      "priorityRange": "63-65",
+      "description": "执行数据导入和质量验证"
+    },
+    {
+      "id": 10,
+      "name": "验收测试",
+      "priorityRange": "66-75",
+      "description": "端到端功能验收测试"
+    }
+  ],
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "创建 Recipe 基础模型类",
+      "description": "创建 Recipe ORM 模型类的基本结构",
+      "phase": 1,
+      "priority": 1,
+      "status": "completed",
+      "passes": true,
+      "dependencies": [],
+      "completedAt": "2026-01-31",
+      "acceptanceCriteria": [
+        "在 backend/api/models/__init__.py 中创建 Recipe 类",
+        "Recipe 类继承自 Base",
+        "表名: recipes",
+        "字段定义完整",
+        "添加 __repr__ 方法返回菜谱名称",
+        "Typecheck passes: python -m mypy api/models/__init__.py"
+      ],
+      "files": [
+        "backend/api/models/__init__.py"
+      ],
+      "estimatedMinutes": 30
+    },
+    {
+      "id": "US-002",
+      "title": "为 Recipe 模型添加索引",
+      "description": "为 Recipe 模型添加数据库索引",
+      "phase": 1,
+      "priority": 2,
+      "status": "completed",
+      "passes": true,
+      "dependencies": ["US-001"],
+      "completedAt": "2026-01-31",
+      "acceptanceCriteria": [
+        "在 Recipe 类中添加索引定义",
+        "使用 __table_args__ 定义索引",
+        "Typecheck passes"
+      ],
+      "files": [
+        "backend/api/models/__init__.py"
+      ],
+      "estimatedMinutes": 20
+    },
+    {
+      "id": "US-003",
+      "title": "创建 RecipeIngredient 关联表模型",
+      "description": "创建菜谱与食材的多对多关联表",
+      "phase": 1,
+      "priority": 3,
+      "status": "completed",
+      "passes": true,
+      "dependencies": [],
+      "completedAt": "2026-01-31",
+      "acceptanceCriteria": [
+        "创建 RecipeIngredient 类",
+        "表名: recipe_ingredients",
+        "字段定义完整",
+        "添加复合唯一索引: (recipe_id, ingredient_id)",
+        "Typecheck passes"
+      ],
+      "files": [
+        "backend/api/models/__init__.py"
+      ],
+      "estimatedMinutes": 25
+    },
+    {
+      "id": "US-004",
+      "title": "创建 RecipeStep 关联表模型",
+      "description": "创建菜谱制作步骤关联表",
+      "phase": 1,
+      "priority": 4,
+      "status": "completed",
+      "passes": true,
+      "dependencies": [],
+      "completedAt": "2026-01-31",
+      "acceptanceCriteria": [
+        "创建 RecipeStep 类",
+        "表名: recipe_steps",
+        "字段定义完整",
+        "添加复合唯一索引: (recipe_id, step_number)",
+        "Typecheck passes"
+      ],
+      "files": [
+        "backend/api/models/__init__.py"
+      ],
+      "estimatedMinutes": 20
+    },
+    {
+      "id": "US-005",
+      "title": "添加模型关系定义",
+      "description": "为 Recipe 模型添加与其他模型的关系",
+      "phase": 1,
+      "priority": 5,
+      "status": "completed",
+      "passes": true,
+      "dependencies": ["US-001", "US-003", "US-004"],
+      "completedAt": "2026-01-31",
+      "acceptanceCriteria": [
+        "在 Recipe 类中添加关系",
+        "在 RecipeIngredient 类中添加关系",
+        "在 RecipeStep 类中添加关系",
+        "Typecheck passes"
+      ],
+      "files": [
+        "backend/api/models/__init__.py"
+      ],
+      "estimatedMinutes": 30
+    },
+    {
+      "id": "US-006",
+      "title": "创建数据库迁移脚本",
+      "description": "创建 Alembic 迁移脚本以创建菜谱相关表",
+      "phase": 1,
+      "priority": 6,
+      "status": "pending",
+      "passes": false,
+      "dependencies": ["US-001", "US-003", "US-004"],
+      "completedAt": null,
+      "acceptanceCriteria": [
+        "创建迁移文件",
+        "迁移包含 upgrade 和 downgrade",
+        "运行迁移: alembic upgrade head",
+        "验证表已创建",
+        "验证外键约束正常工作"
+      ],
+      "files": [
+        "backend/alembic/versions/xxx_create_recipes.py"
+      ],
+      "estimatedMinutes": 40
+    },
+    {
+      "id": "US-007",
+      "title": "创建 RecipeBase Schema",
+      "description": "创建 Recipe 的 Pydantic 基础验证模型",
+      "phase": 1,
+      "priority": 7,
+      "status": "completed",
+      "passes": true,
+      "dependencies": [],
+      "completedAt": "2026-01-31",
+      "acceptanceCriteria": [
+        "创建 backend/api/schemas/recipe.py",
+        "创建 RecipeBase 类",
+        "字段定义完整",
+        "添加 Config 类: orm_mode = True",
+        "Typecheck passes"
+      ],
+      "files": [
+        "backend/api/schemas/recipe.py"
+      ],
+      "estimatedMinutes": 25
+    },
+    {
+      "id": "US-008",
+      "title": "创建完整 Schema 类",
+      "description": "创建 Recipe 的完整 Schema 类集合",
+      "phase": 1,
+      "priority": 8,
+      "status": "pending",
+      "passes": false,
+      "dependencies": ["US-007"],
+      "completedAt": null,
+      "acceptanceCriteria": [
+        "创建 RecipeCreate, RecipeUpdate, RecipeResponse",
+        "创建 RecipeListItem, RecipeListResponse",
+        "添加单元测试验证 Schema 验证逻辑",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "files": [
+        "backend/api/schemas/recipe.py"
+      ],
+      "estimatedMinutes": 35,
+      "testFiles": [
+        "backend/tests/test_unit/test_recipe_schemas.py"
+      ]
+    },
+    {
+      "id": "US-009",
+      "title": "创建导入配置文件结构和常量",
+      "description": "创建 Excel 导入配置文件，定义常量和映射",
+      "phase": 2,
+      "priority": 9,
+      "status": "pending",
+      "passes": false,
+      "dependencies": [],
+      "completedAt": null,
+      "acceptanceCriteria": [
+        "创建 backend/scripts/recipe_import_config.py",
+        "定义 EXCEL_COLUMN_MAP, DIFFICULTY_MAP",
+        "定义 24节气列表",
+        "添加完整的中文注释",
+        "Typecheck passes"
+      ],
+      "files": [
+        "backend/scripts/recipe_import_config.py"
+      ],
+      "estimatedMinutes": 30
+    },
+    {
+      "id": "US-010",
+      "title": "实现 parse_cooking_time() 函数",
+      "description": "实现烹饪时间解析函数",
+      "phase": 2,
+      "priority": 10,
+      "status": "pending",
+      "passes": false,
+      "dependencies": ["US-009"],
+      "completedAt": null,
+      "acceptanceCriteria": [
+        "添加 parse_cooking_time() 函数",
+        "支持多种时间格式",
+        "添加单元测试覆盖所有分支",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "files": [
+        "backend/scripts/recipe_import_config.py"
+      ],
+      "estimatedMinutes": 40,
+      "testFiles": [
+        "backend/tests/test_unit/test_import_config.py"
+      ]
+    },
+    {
+      "id": "US-011",
+      "title": "实现 parse_difficulty() 函数",
+      "description": "实现难度等级映射函数",
+      "phase": 2,
+      "priority": 11,
+      "status": "pending",
+      "passes": false,
+      "dependencies": ["US-009"],
+      "completedAt": null,
+      "acceptanceCriteria": [
+        "添加 parse_difficulty() 函数",
+        "使用 DIFFICULTY_MAP 直接映射",
+        "添加单元测试",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "files": [
+        "backend/scripts/recipe_import_config.py"
+      ],
+      "estimatedMinutes": 25,
+      "testFiles": [
+        "backend/tests/test_unit/test_import_config.py"
+      ]
+    },
+    {
+      "id": "US-012",
+      "title": "实现 parse_json_field() 函数",
+      "description": "实现 JSON 字段解析函数",
+      "phase": 2,
+      "priority": 12,
+      "status": "pending",
+      "passes": false,
+      "dependencies": ["US-009"],
+      "completedAt": null,
+      "acceptanceCriteria": [
+        "添加 parse_json_field() 函数",
+        "支持 list 和 str 解析",
+        "添加单元测试",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "files": [
+        "backend/scripts/recipe_import_config.py"
+      ],
+      "estimatedMinutes": 25,
+      "testFiles": [
+        "backend/tests/test_unit/test_import_config.py"
+      ]
+    },
+    {
+      "id": "US-013",
+      "title": "实现 parse_ingredients() 函数",
+      "description": "实现食材解析函数",
+      "phase": 3,
+      "priority": 13,
+      "status": "pending",
+      "passes": false,
+      "dependencies": ["US-009"],
+      "completedAt": null,
+      "acceptanceCriteria": [
+        "添加 parse_ingredients() 函数",
+        "支持多种分隔符",
+        "解析食材名称和用量",
+        "处理括号备注",
+        "添加单元测试",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "files": [
+        "backend/scripts/recipe_import_config.py"
+      ],
+      "estimatedMinutes": 45,
+      "testFiles": [
+        "backend/tests/test_unit/test_import_config.py"
+      ]
+    },
+    {
+      "id": "US-014",
+      "title": "实现 parse_steps() 函数",
+      "description": "实现制作步骤解析函数",
+      "phase": 3,
+      "priority": 14,
+      "status": "pending",
+      "passes": false,
+      "dependencies": ["US-009"],
+      "completedAt": null,
+      "acceptanceCriteria": [
+        "添加 parse_steps() 函数",
+        "支持多种分隔符",
+        "自动编号",
+        "添加单元测试",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "files": [
+        "backend/scripts/recipe_import_config.py"
+      ],
+      "estimatedMinutes": 40,
+      "testFiles": [
+        "backend/tests/test_unit/test_import_config.py"
+      ]
+    },
+    {
+      "id": "US-015",
+      "title": "创建导入脚本基础结构",
+      "description": "创建导入脚本的主文件和参数解析",
+      "phase": 4,
+      "priority": 15,
+      "status": "pending",
+      "passes": false,
+      "dependencies": [],
+      "completedAt": null,
+      "acceptanceCriteria": [
+        "创建 backend/scripts/import_recipes.py",
+        "添加命令行参数解析",
+        "添加 main() 函数",
+        "添加 --help 文档",
+        "执行 --help 验证",
+        "Typecheck passes"
+      ],
+      "files": [
+        "backend/scripts/import_recipes.py"
+      ],
+      "estimatedMinutes": 30
+    },
+    {
+      "id": "US-016",
+      "title": "实现 Excel 文件读取函数",
+      "description": "实现读取 Excel 文件的函数",
+      "phase": 4,
+      "priority": 16,
+      "status": "pending",
+      "passes": false,
+      "dependencies": ["US-015"],
+      "completedAt": null,
+      "acceptanceCriteria": [
+        "添加 read_excel_file() 函数",
+        "使用 pandas.read_excel()",
+        "跳过 title 为空的行",
+        "支持 limit 参数",
+        "添加单元测试",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "files": [
+        "backend/scripts/import_recipes.py"
+      ],
+      "estimatedMinutes": 35,
+      "testFiles": [
+        "backend/tests/test_unit/test_import_recipes.py"
+      ]
+    },
+    {
+      "id": "US-017",
+      "title": "实现菜谱去重检查函数",
+      "description": "实现检查菜谱是否已存在的函数",
+      "phase": 4,
+      "priority": 17,
+      "status": "pending",
+      "passes": false,
+      "dependencies": ["US-015"],
+      "completedAt": null,
+      "acceptanceCriteria": [
+        "添加 check_recipe_exists() 函数",
+        "按 name 字段查询数据库",
+        "返回 True/False",
+        "添加单元测试 (使用 mock db)",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "files": [
+        "backend/scripts/import_recipes.py"
+      ],
+      "estimatedMinutes": 25,
+      "testFiles": [
+        "backend/tests/test_unit/test_import_recipes.py"
+      ]
+    },
+    {
+      "id": "US-018",
+      "title": "实现食材查找或创建函数",
+      "description": "实现查找或创建食材的函数",
+      "phase": 4,
+      "priority": 18,
+      "status": "pending",
+      "passes": false,
+      "dependencies": ["US-015"],
+      "completedAt": null,
+      "acceptanceCriteria": [
+        "添加 get_or_create_ingredient() 函数",
+        "按 name 精确查找",
+        "按别名查找",
+        "创建新食材",
+        "添加单元测试",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "files": [
+        "backend/scripts/import_recipes.py"
+      ],
+      "estimatedMinutes": 35,
+      "testFiles": [
+        "backend/tests/test_unit/test_import_recipes.py"
+      ]
+    },
+    {
+      "id": "US-019",
+      "title": "实现单条菜谱导入函数",
+      "description": "整合单条菜谱导入的完整流程",
+      "phase": 4,
+      "priority": 19,
+      "status": "pending",
+      "passes": false,
+      "dependencies": ["US-012", "US-013", "US-014", "US-017", "US-018"],
+      "completedAt": null,
+      "acceptanceCriteria": [
+        "添加 import_single_recipe() 函数",
+        "检查是否已存在",
+        "解析各种字段",
+        "解析食材和步骤",
+        "提交事务",
+        "错误处理",
+        "添加单元测试",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "files": [
+        "backend/scripts/import_recipes.py"
+      ],
+      "estimatedMinutes": 60,
+      "testFiles": [
+        "backend/tests/test_unit/test_import_recipes.py"
+      ]
+    },
+    {
+      "id": "US-020",
+      "title": "实现批量导入主函数",
+      "description": "实现批量导入的主逻辑",
+      "phase": 4,
+      "priority": 20,
+      "status": "pending",
+      "passes": false,
+      "dependencies": ["US-016", "US-019"],
+      "completedAt": null,
+      "acceptanceCriteria": [
+        "添加 import_recipes() 函数",
+        "初始化数据库",
+        "读取 Excel",
+        "遍历导入",
+        "统计结果",
+        "每 100 条打印进度",
+        "Typecheck passes"
+      ],
+      "files": [
+        "backend/scripts/import_recipes.py"
+      ],
+      "estimatedMinutes": 40
+    },
+    {
+      "id": "US-021",
+      "title": "实现干运行模式",
+      "description": "实现干运行模式用于测试",
+      "phase": 4,
+      "priority": 21,
+      "status": "pending",
+      "passes": false,
+      "dependencies": ["US-016"],
+      "completedAt": null,
+      "acceptanceCriteria": [
+        "添加 dry_run_import() 函数",
+        "读取 Excel 但不写入数据库",
+        "打印解析结果",
+        "执行 --dry-run --limit 10 验证",
+        "Typecheck passes"
+      ],
+      "files": [
+        "backend/scripts/import_recipes.py"
+      ],
+      "estimatedMinutes": 30
+    },
+    {
+      "id": "US-022",
+      "title": "实现失败导出功能",
+      "description": "实现导出失败菜谱到 CSV",
+      "phase": 4,
+      "priority": 22,
+      "status": "pending",
+      "passes": false,
+      "dependencies": ["US-015"],
+      "completedAt": null,
+      "acceptanceCriteria": [
+        "添加 export_failed_recipes() 函数",
+        "输出 CSV 文件",
+        "编码: UTF-8 with BOM",
+        "添加单元测试",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "files": [
+        "backend/scripts/import_recipes.py"
+      ],
+      "estimatedMinutes": 25,
+      "testFiles": [
+        "backend/tests/test_unit/test_import_recipes.py"
+      ]
+    },
+    {
+      "id": "US-023",
+      "title": "添加导入进度日志",
+      "description": "为导入过程添加详细的进度日志",
+      "phase": 4,
+      "priority": 23,
+      "status": "pending",
+      "passes": false,
+      "dependencies": ["US-020"],
+      "completedAt": null,
+      "acceptanceCriteria": [
+        "添加日志记录",
+        "记录开始和结束",
+        "每 100 条打印进度",
+        "记录成功/跳过/失败数量",
+        "记录失败详情",
+        "使用 logging 模块",
+        "添加单元测试验证日志",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "files": [
+        "backend/scripts/import_recipes.py"
+      ],
+      "estimatedMinutes": 30,
+      "testFiles": [
+        "backend/tests/test_unit/test_import_recipes.py"
+      ]
+    },
+    {
+      "id": "US-024",
+      "title": "创建 RecipeService 基础结构",
+      "description": "创建菜谱服务类的基础结构",
+      "phase": 5,
+      "priority": 24,
+      "status": "pending",
+      "passes": false,
+      "dependencies": [],
+      "completedAt": null,
+      "acceptanceCriteria": [
+        "创建 backend/api/services/recipe_service.py",
+        "创建 RecipeService 类 (无状态)",
+        "所有方法接受 db: Session 参数",
+        "添加类型提示和文档字符串",
+        "Typecheck passes"
+      ],
+      "files": [
+        "backend/api/services/recipe_service.py"
+      ],
+      "estimatedMinutes": 20
+    },
+    {
+      "id": "US-025",
+      "title": "实现 get_recipes() 方法",
+      "description": "实现菜谱列表查询方法",
+      "phase": 5,
+      "priority": 25,
+      "status": "pending",
+      "passes": false,
+      "dependencies": ["US-024"],
+      "completedAt": null,
+      "acceptanceCriteria": [
+        "添加 get_recipes() 方法",
+        "支持筛选和分页",
+        "返回 {total, page, page_size, items}",
+        "添加单元测试",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "files": [
+        "backend/api/services/recipe_service.py"
+      ],
+      "estimatedMinutes": 45,
+      "testFiles": [
+        "backend/tests/test_unit/test_recipe_service.py"
+      ]
+    },
+    {
+      "id": "US-026",
+      "title": "实现 get_recipe_by_id() 方法",
+      "description": "实现菜谱详情查询方法",
+      "phase": 5,
+      "priority": 26,
+      "status": "pending",
+      "passes": false,
+      "dependencies": ["US-024"],
+      "completedAt": null,
+      "acceptanceCriteria": [
+        "添加 get_recipe_by_id() 方法",
+        "预加载 ingredients 和 steps",
+        "未找到返回 None",
+        "添加单元测试",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "files": [
+        "backend/api/services/recipe_service.py"
+      ],
+      "estimatedMinutes": 30,
+      "testFiles": [
+        "backend/tests/test_unit/test_recipe_service.py"
+      ]
+    },
+    {
+      "id": "US-027",
+      "title": "实现 search_recipes() 方法",
+      "description": "实现菜谱搜索方法",
+      "phase": 5,
+      "priority": 27,
+      "status": "pending",
+      "passes": false,
+      "dependencies": ["US-024"],
+      "completedAt": null,
+      "acceptanceCriteria": [
+        "添加 search_recipes() 方法",
+        "搜索范围: name, ingredients, efficacy_tags",
+        "支持组合筛选",
+        "添加单元测试",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "files": [
+        "backend/api/services/recipe_service.py"
+      ],
+      "estimatedMinutes": 40,
+      "testFiles": [
+        "backend/tests/test_unit/test_recipe_service.py"
+      ]
+    },
+    {
+      "id": "US-028",
+      "title": "实现 get_recommendations_by_constitution() 方法",
+      "description": "实现基于体质的推荐方法",
+      "phase": 5,
+      "priority": 28,
+      "status": "pending",
+      "passes": false,
+      "dependencies": ["US-024"],
+      "completedAt": null,
+      "acceptanceCriteria": [
+        "添加 get_recommendations_by_constitution() 方法",
+        "优先返回适合该体质的菜谱",
+        "排除禁忌该体质的菜谱",
+        "按 created_at DESC 排序",
+        "验证体质代码有效性",
+        "添加单元测试",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "files": [
+        "backend/api/services/recipe_service.py"
+      ],
+      "estimatedMinutes": 35,
+      "testFiles": [
+        "backend/tests/test_unit/test_recipe_service.py"
+      ]
+    },
+    {
+      "id": "US-029",
+      "title": "添加服务层错误处理",
+      "description": "为服务层添加错误处理",
+      "phase": 5,
+      "priority": 29,
+      "status": "pending",
+      "passes": false,
+      "dependencies": ["US-025", "US-026", "US-027", "US-028"],
+      "completedAt": null,
+      "acceptanceCriteria": [
+        "验证 constitution 参数有效性",
+        "无效体质抛出 ValueError",
+        "处理数据库异常",
+        "返回清晰的错误消息",
+        "添加单元测试",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "files": [
+        "backend/api/services/recipe_service.py"
+      ],
+      "estimatedMinutes": 30,
+      "testFiles": [
+        "backend/tests/test_unit/test_recipe_service.py"
+      ]
+    },
+    {
+      "id": "US-030",
+      "title": "添加服务层日志",
+      "description": "为服务层添加日志记录",
+      "phase": 5,
+      "priority": 30,
+      "status": "pending",
+      "passes": false,
+      "dependencies": ["US-029"],
+      "completedAt": null,
+      "acceptanceCriteria": [
+        "记录查询参数",
+        "记录结果数量",
+        "记录错误信息",
+        "使用 logging 模块",
+        "添加单元测试验证日志",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "files": [
+        "backend/api/services/recipe_service.py"
+      ],
+      "estimatedMinutes": 25,
+      "testFiles": [
+        "backend/tests/test_unit/test_recipe_service.py"
+      ]
+    },
+    {
+      "id": "US-031",
+      "title": "创建服务层工厂函数",
+      "description": "创建获取服务实例的工厂函数",
+      "phase": 5,
+      "priority": 31,
+      "status": "pending",
+      "passes": false,
+      "dependencies": ["US-030"],
+      "completedAt": null,
+      "acceptanceCriteria": [
+        "添加 get_recipe_service() 函数",
+        "返回 RecipeService 实例",
+        "添加单元测试",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "files": [
+        "backend/api/services/recipe_service.py"
+      ],
+      "estimatedMinutes": 15,
+      "testFiles": [
+        "backend/tests/test_unit/test_recipe_service.py"
+      ]
+    },
+    {
+      "id": "US-032",
+      "title": "创建 StandardResponse Schema",
+      "description": "创建统一的 API 响应格式 Schema",
+      "phase": 6,
+      "priority": 32,
+      "status": "pending",
+      "passes": false,
+      "dependencies": [],
+      "completedAt": null,
+      "acceptanceCriteria": [
+        "创建 backend/api/schemas/common.py",
+        "定义泛型响应类 StandardResponse",
+        "添加类型提示",
+        "Typecheck passes"
+      ],
+      "files": [
+        "backend/api/schemas/common.py"
+      ],
+      "estimatedMinutes": 20
+    },
+    {
+      "id": "US-033",
+      "title": "实现 create_recipe() 服务方法",
+      "description": "实现创建菜谱的服务方法",
+      "phase": 6,
+      "priority": 33,
+      "status": "pending",
+      "passes": false,
+      "dependencies": ["US-024", "US-018"],
+      "completedAt": null,
+      "acceptanceCriteria": [
+        "添加 create_recipe() 方法",
+        "验证名称唯一性",
+        "处理食材关联",
+        "创建步骤记录",
+        "提交事务",
+        "添加单元测试",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "files": [
+        "backend/api/services/recipe_service.py"
+      ],
+      "estimatedMinutes": 50,
+      "testFiles": [
+        "backend/tests/test_unit/test_recipe_service.py"
+      ]
+    },
+    {
+      "id": "US-034",
+      "title": "实现 update_recipe() 服务方法",
+      "description": "实现更新菜谱的服务方法",
+      "phase": 6,
+      "priority": 34,
+      "status": "pending",
+      "passes": false,
+      "dependencies": ["US-033"],
+      "completedAt": null,
+      "acceptanceCriteria": [
+        "添加 update_recipe() 方法",
+        "检查菜谱是否存在",
+        "更新基础字段",
+        "重新关联食材和步骤",
+        "添加单元测试",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "files": [
+        "backend/api/services/recipe_service.py"
+      ],
+      "estimatedMinutes": 45,
+      "testFiles": [
+        "backend/tests/test_unit/test_recipe_service.py"
+      ]
+    },
+    {
+      "id": "US-035",
+      "title": "实现 delete_recipe() 服务方法",
+      "description": "实现删除菜谱的服务方法",
+      "phase": 6,
+      "priority": 35,
+      "status": "pending",
+      "passes": false,
+      "dependencies": ["US-024"],
+      "completedAt": null,
+      "acceptanceCriteria": [
+        "添加 delete_recipe() 方法",
+        "检查菜谱是否存在",
+        "级联删除关联的食材和步骤",
+        "添加单元测试",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "files": [
+        "backend/api/services/recipe_service.py"
+      ],
+      "estimatedMinutes": 30,
+      "testFiles": [
+        "backend/tests/test_unit/test_recipe_service.py"
+      ]
+    },
+    {
+      "id": "US-036",
+      "title": "添加体质代码验证函数",
+      "description": "创建体质代码验证工具函数",
+      "phase": 6,
+      "priority": 36,
+      "status": "pending",
+      "passes": false,
+      "dependencies": [],
+      "completedAt": null,
+      "acceptanceCriteria": [
+        "创建 backend/api/utils/validators.py",
+        "定义 VALID_CONSTITUTIONS 常量",
+        "添加 is_valid_constitution_code() 函数",
+        "添加 validate_constitution_list() 函数",
+        "添加单元测试",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "files": [
+        "backend/api/utils/validators.py"
+      ],
+      "estimatedMinutes": 25,
+      "testFiles": [
+        "backend/tests/test_unit/test_validators.py"
+      ]
+    },
+    {
+      "id": "US-037",
+      "title": "添加难度等级验证函数",
+      "description": "创建难度等级验证工具函数",
+      "phase": 6,
+      "priority": 37,
+      "status": "pending",
+      "passes": false,
+      "dependencies": [],
+      "completedAt": null,
+      "acceptanceCriteria": [
+        "在 validators.py 中添加",
+        "定义 VALID_DIFFICULTIES 常量",
+        "添加 is_valid_difficulty() 函数",
+        "添加单元测试",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "files": [
+        "backend/api/utils/validators.py"
+      ],
+      "estimatedMinutes": 20,
+      "testFiles": [
+        "backend/tests/test_unit/test_validators.py"
+      ]
+    },
+    {
+      "id": "US-038",
+      "title": "创建 Schema 验证辅助函数",
+      "description": "创建 Schema 层的验证辅助函数",
+      "phase": 6,
+      "priority": 38,
+      "status": "pending",
+      "passes": false,
+      "dependencies": ["US-008", "US-036", "US-037"],
+      "completedAt": null,
+      "acceptanceCriteria": [
+        "在 recipe.py 中添加 validator",
+        "添加体质验证",
+        "添加难度验证",
+        "添加单元测试",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "files": [
+        "backend/api/schemas/recipe.py"
+      ],
+      "estimatedMinutes": 30,
+      "testFiles": [
+        "backend/tests/test_unit/test_recipe_schemas.py"
+      ]
+    },
+    {
+      "id": "US-039",
+      "title": "创建导入验证 Schema",
+      "description": "创建导入专用的验证 Schema",
+      "phase": 6,
+      "priority": 39,
+      "status": "pending",
+      "passes": false,
+      "dependencies": ["US-007"],
+      "completedAt": null,
+      "acceptanceCriteria": [
+        "添加 RecipeImportBase 类",
+        "定义原始字段",
+        "添加 Config 类允许额外字段",
+        "Typecheck passes"
+      ],
+      "files": [
+        "backend/api/schemas/recipe.py"
+      ],
+      "estimatedMinutes": 20
+    },
+    {
+      "id": "US-040",
+      "title": "创建菜谱统计服务方法",
+      "description": "实现菜谱统计功能的服务方法",
+      "phase": 6,
+      "priority": 40,
+      "status": "pending",
+      "passes": false,
+      "dependencies": ["US-024"],
+      "completedAt": null,
+      "acceptanceCriteria": [
+        "添加 get_statistics() 方法",
+        "统计各项指标",
+        "返回统计字典",
+        "添加单元测试",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "files": [
+        "backend/api/services/recipe_service.py"
+      ],
+      "estimatedMinutes": 35,
+      "testFiles": [
+        "backend/tests/test_unit/test_recipe_service.py"
+      ]
+    },
+    {
+      "id": "US-041",
+      "title": "实现批量获取菜谱方法",
+      "description": "实现批量获取菜谱详情的服务方法",
+      "phase": 6,
+      "priority": 41,
+      "status": "pending",
+      "passes": false,
+      "dependencies": ["US-026"],
+      "completedAt": null,
+      "acceptanceCriteria": [
+        "添加 get_recipes_by_ids() 方法",
+        "验证 ID 列表",
+        "限制最多 100 个 ID",
+        "预加载食材和步骤",
+        "添加单元测试",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "files": [
+        "backend/api/services/recipe_service.py"
+      ],
+      "estimatedMinutes": 30,
+      "testFiles": [
+        "backend/tests/test_unit/test_recipe_service.py"
+      ]
+    },
+    {
+      "id": "US-042",
+      "title": "实现 POST /api/v1/recipes 接口",
+      "description": "实现创建菜谱的 API 接口",
+      "phase": 6,
+      "priority": 42,
+      "status": "pending",
+      "passes": false,
+      "dependencies": ["US-033", "US-049"],
+      "completedAt": null,
+      "acceptanceCriteria": [
+        "添加 POST 路由",
+        "请求体验证",
+        "调用 create_recipe()",
+        "错误处理",
+        "添加 API 测试",
+        "验证 curl 命令",
+        "Tests pass"
+      ],
+      "files": [
+        "backend/api/routers/recipes.py"
+      ],
+      "estimatedMinutes": 40,
+      "testFiles": [
+        "backend/tests/test_api/test_recipes_api.py"
+      ]
+    },
+    {
+      "id": "US-043",
+      "title": "实现 PUT /api/v1/recipes/{id} 接口",
+      "description": "实现更新菜谱的 API 接口",
+      "phase": 6,
+      "priority": 43,
+      "status": "pending",
+      "passes": false,
+      "dependencies": ["US-034", "US-049"],
+      "completedAt": null,
+      "acceptanceCriteria": [
+        "添加 PUT 路由",
+        "请求体验证",
+        "调用 update_recipe()",
+        "404 处理",
+        "添加 API 测试",
+        "验证 curl 命令",
+        "Tests pass"
+      ],
+      "files": [
+        "backend/api/routers/recipes.py"
+      ],
+      "estimatedMinutes": 35,
+      "testFiles": [
+        "backend/tests/test_api/test_recipes_api.py"
+      ]
+    },
+    {
+      "id": "US-044",
+      "title": "实现 DELETE /api/v1/recipes/{id} 接口",
+      "description": "实现删除菜谱的 API 接口",
+      "phase": 6,
+      "priority": 44,
+      "status": "pending",
+      "passes": false,
+      "dependencies": ["US-035", "US-049"],
+      "completedAt": null,
+      "acceptanceCriteria": [
+        "添加 DELETE 路由",
+        "调用 delete_recipe()",
+        "404 处理",
+        "返回 204",
+        "添加 API 测试",
+        "验证 curl 命令",
+        "Tests pass"
+      ],
+      "files": [
+        "backend/api/routers/recipes.py"
+      ],
+      "estimatedMinutes": 30,
+      "testFiles": [
+        "backend/tests/test_api/test_recipes_api.py"
+      ]
+    },
+    {
+      "id": "US-045",
+      "title": "实现 GET /api/v1/recipes/statistics 接口",
+      "description": "实现菜谱统计的 API 接口",
+      "phase": 6,
+      "priority": 45,
+      "status": "pending",
+      "passes": false,
+      "dependencies": ["US-040", "US-049"],
+      "completedAt": null,
+      "acceptanceCriteria": [
+        "添加 /statistics 路由",
+        "调用 get_statistics()",
+        "返回统计信息",
+        "添加 API 测试",
+        "验证 curl 命令",
+        "Tests pass"
+      ],
+      "files": [
+        "backend/api/routers/recipes.py"
+      ],
+      "estimatedMinutes": 25,
+      "testFiles": [
+        "backend/tests/test_api/test_recipes_api.py"
+      ]
+    },
+    {
+      "id": "US-046",
+      "title": "实现 POST /api/v1/recipes/batch 接口",
+      "description": "实现批量获取菜谱的 API 接口",
+      "phase": 6,
+      "priority": 46,
+      "status": "pending",
+      "passes": false,
+      "dependencies": ["US-041", "US-049"],
+      "completedAt": null,
+      "acceptanceCriteria": [
+        "添加 /batch 路由",
+        "验证 ID 列表",
+        "调用 get_recipes_by_ids()",
+        "添加 API 测试",
+        "验证 curl 命令",
+        "Tests pass"
+      ],
+      "files": [
+        "backend/api/routers/recipes.py"
+      ],
+      "estimatedMinutes": 30,
+      "testFiles": [
+        "backend/tests/test_api/test_recipes_api.py"
+      ]
+    },
+    {
+      "id": "US-047",
+      "title": "添加请求日志中间件",
+      "description": "为菜谱 API 添加请求日志中间件",
+      "phase": 6,
+      "priority": 47,
+      "status": "pending",
+      "passes": false,
+      "dependencies": ["US-049"],
+      "completedAt": null,
+      "acceptanceCriteria": [
+        "记录请求方法和路径",
+        "记录查询参数",
+        "记录请求体（脱敏）",
+        "记录响应状态和耗时",
+        "使用 logging 模块",
+        "添加 API 测试验证日志",
+        "Tests pass"
+      ],
+      "files": [
+        "backend/api/routers/recipes.py"
+      ],
+      "estimatedMinutes": 30,
+      "testFiles": [
+        "backend/tests/test_api/test_recipes_api.py"
+      ]
+    },
+    {
+      "id": "US-048",
+      "title": "添加 API 限流保护",
+      "description": "为菜谱 API 添加限流保护",
+      "phase": 6,
+      "priority": 48,
+      "status": "pending",
+      "passes": false,
+      "dependencies": ["US-049"],
+      "completedAt": null,
+      "acceptanceCriteria": [
+        "使用 slowapi 或类似库",
+        "配置限流规则",
+        "超限返回 429",
+        "添加 API 测试",
+        "Tests pass"
+      ],
+      "files": [
+        "backend/api/routers/recipes.py"
+      ],
+      "estimatedMinutes": 45,
+      "testFiles": [
+        "backend/tests/test_api/test_recipes_api.py"
+      ]
+    },
+    {
+      "id": "US-049",
+      "title": "创建菜谱 API 路由基础",
+      "description": "创建菜谱 API 路由的基础结构",
+      "phase": 7,
+      "priority": 49,
+      "status": "pending",
+      "passes": false,
+      "dependencies": ["US-008"],
+      "completedAt": null,
+      "acceptanceCriteria": [
+        "创建 backend/api/routers/recipes.py",
+        "创建 APIRouter",
+        "在 main.py 中注册路由",
+        "添加 CORS 支持",
+        "启动服务器验证",
+        "Typecheck passes"
+      ],
+      "files": [
+        "backend/api/routers/recipes.py",
+        "backend/main.py"
+      ],
+      "estimatedMinutes": 25
+    },
+    {
+      "id": "US-050",
+      "title": "实现 GET /api/v1/recipes 接口",
+      "description": "实现菜谱列表接口",
+      "phase": 7,
+      "priority": 50,
+      "status": "pending",
+      "passes": false,
+      "dependencies": ["US-042", "US-049"],
+      "completedAt": null,
+      "acceptanceCriteria": [
+        "添加 GET 路由",
+        "查询参数处理",
+        "调用 get_recipes()",
+        "返回标准格式",
+        "添加 API 测试",
+        "验证 curl 命令",
+        "Tests pass"
+      ],
+      "files": [
+        "backend/api/routers/recipes.py"
+      ],
+      "estimatedMinutes": 35,
+      "testFiles": [
+        "backend/tests/test_api/test_recipes_api.py"
+      ]
+    },
+    {
+      "id": "US-051",
+      "title": "实现 GET /api/v1/recipes/{id} 接口",
+      "description": "实现菜谱详情接口",
+      "phase": 7,
+      "priority": 51,
+      "status": "pending",
+      "passes": false,
+      "dependencies": ["US-043", "US-049"],
+      "completedAt": null,
+      "acceptanceCriteria": [
+        "添加 GET /{id} 路由",
+        "参数验证",
+        "调用 get_recipe_by_id()",
+        "404 处理",
+        "添加 API 测试",
+        "验证 curl 命令",
+        "Tests pass"
+      ],
+      "files": [
+        "backend/api/routers/recipes.py"
+      ],
+      "estimatedMinutes": 30,
+      "testFiles": [
+        "backend/tests/test_api/test_recipes_api.py"
+      ]
+    },
+    {
+      "id": "US-052",
+      "title": "实现 GET /api/v1/recipes/search 接口",
+      "description": "实现菜谱搜索接口",
+      "phase": 7,
+      "priority": 52,
+      "status": "pending",
+      "passes": false,
+      "dependencies": ["US-044", "US-049"],
+      "completedAt": null,
+      "acceptanceCriteria": [
+        "添加 /search 路由",
+        "必需参数 keyword",
+        "调用 search_recipes()",
+        "添加 API 测试",
+        "验证 curl 命令",
+        "Tests pass"
+      ],
+      "files": [
+        "backend/api/routers/recipes.py"
+      ],
+      "estimatedMinutes": 30,
+      "testFiles": [
+        "backend/tests/test_api/test_recipes_api.py"
+      ]
+    },
+    {
+      "id": "US-053",
+      "title": "实现 GET /api/v1/recipes/recommendations 接口",
+      "description": "实现体质推荐接口",
+      "phase": 7,
+      "priority": 53,
+      "status": "pending",
+      "passes": false,
+      "dependencies": ["US-045", "US-049"],
+      "completedAt": null,
+      "acceptanceCriteria": [
+        "添加 /recommendations 路由",
+        "必需参数 constitution",
+        "调用 get_recommendations_by_constitution()",
+        "无效体质返回 400",
+        "添加 API 测试",
+        "验证 curl 命令",
+        "Tests pass"
+      ],
+      "files": [
+        "backend/api/routers/recipes.py"
+      ],
+      "estimatedMinutes": 30,
+      "testFiles": [
+        "backend/tests/test_api/test_recipes_api.py"
+      ]
+    },
+    {
+      "id": "US-054",
+      "title": "添加 API 错误处理",
+      "description": "为 API 添加统一的错误处理",
+      "phase": 7,
+      "priority": 54,
+      "status": "pending",
+      "passes": false,
+      "dependencies": ["US-050", "US-051", "US-052", "US-053"],
+      "completedAt": null,
+      "acceptanceCriteria": [
+        "参数验证错误处理",
+        "业务逻辑错误处理",
+        "数据库错误处理",
+        "返回标准错误格式",
+        "添加 API 测试",
+        "Tests pass"
+      ],
+      "files": [
+        "backend/api/routers/recipes.py"
+      ],
+      "estimatedMinutes": 35,
+      "testFiles": [
+        "backend/tests/test_api/test_recipes_api.py"
+      ]
+    },
+    {
+      "id": "US-055",
+      "title": "添加 API 日志",
+      "description": "为 API 添加请求日志",
+      "phase": 7,
+      "priority": 55,
+      "status": "pending",
+      "passes": false,
+      "dependencies": ["US-054"],
+      "completedAt": null,
+      "acceptanceCriteria": [
+        "记录每个请求的参数",
+        "记录响应状态",
+        "记录处理时间",
+        "使用 logging 模块",
+        "添加 API 测试验证日志",
+        "Tests pass"
+      ],
+      "files": [
+        "backend/api/routers/recipes.py"
+      ],
+      "estimatedMinutes": 25,
+      "testFiles": [
+        "backend/tests/test_api/test_recipes_api.py"
+      ]
+    },
+    {
+      "id": "US-056",
+      "title": "添加首页食谱库卡片",
+      "description": "在首页添加食谱库功能入口",
+      "phase": 8,
+      "priority": 56,
+      "status": "pending",
+      "passes": false,
+      "dependencies": [],
+      "completedAt": null,
+      "acceptanceCriteria": [
+        "在 index.vue 添加卡片",
+        "图标、标题、描述、按钮",
+        "点击跳转",
+        "在浏览器中验证",
+        "Verify in browser"
+      ],
+      "files": [
+        "frontend/src/pages/index.vue"
+      ],
+      "estimatedMinutes": 30,
+      "needsBrowserVerification": true
+    },
+    {
+      "id": "US-057",
+      "title": "创建菜谱列表页面基础结构",
+      "description": "创建菜谱列表页面的基础结构",
+      "phase": 8,
+      "priority": 57,
+      "status": "pending",
+      "passes": false,
+      "dependencies": [],
+      "completedAt": null,
+      "acceptanceCriteria": [
+        "创建 frontend/src/pages/recipes/list.vue",
+        "页面结构完整",
+        "导航、筛选器、列表区域",
+        "加载状态、空状态",
+        "在浏览器中验证布局",
+        "Verify in browser"
+      ],
+      "files": [
+        "frontend/src/pages/recipes/list.vue"
+      ],
+      "estimatedMinutes": 40,
+      "needsBrowserVerification": true
+    },
+    {
+      "id": "US-058",
+      "title": "实现列表页筛选器",
+      "description": "实现菜谱列表页的筛选器组件",
+      "phase": 8,
+      "priority": 58,
+      "status": "pending",
+      "passes": false,
+      "dependencies": ["US-057"],
+      "completedAt": null,
+      "acceptanceCriteria": [
+        "体质筛选：9种体质标签",
+        "节气筛选：春夏秋冬",
+        "难度筛选：3档",
+        "点击触发筛选",
+        "选中高亮",
+        "可取消筛选",
+        "在浏览器中验证",
+        "Verify in browser"
+      ],
+      "files": [
+        "frontend/src/pages/recipes/list.vue"
+      ],
+      "estimatedMinutes": 50,
+      "needsBrowserVerification": true
+    },
+    {
+      "id": "US-059",
+      "title": "实现列表页菜谱卡片",
+      "description": "实现菜谱卡片组件",
+      "phase": 8,
+      "priority": 59,
+      "status": "pending",
+      "passes": false,
+      "dependencies": ["US-057"],
+      "completedAt": null,
+      "acceptanceCriteria": [
+        "封面图显示",
+        "菜谱名称",
+        "难度标签（颜色区分）",
+        "功效标签（前3个）",
+        "点击跳转详情",
+        "下拉刷新",
+        "滚动加载更多",
+        "在浏览器中验证",
+        "Verify in browser"
+      ],
+      "files": [
+        "frontend/src/pages/recipes/list.vue"
+      ],
+      "estimatedMinutes": 60,
+      "needsBrowserVerification": true
+    },
+    {
+      "id": "US-060",
+      "title": "创建菜谱详情页面基础结构",
+      "description": "创建菜谱详情页面的基础结构",
+      "phase": 8,
+      "priority": 60,
+      "status": "pending",
+      "passes": false,
+      "dependencies": [],
+      "completedAt": null,
+      "acceptanceCriteria": [
+        "创建 frontend/src/pages/recipes/detail.vue",
+        "页面结构完整",
+        "导航、封面图、内容区域",
+        "加载状态",
+        "在浏览器中验证布局",
+        "Verify in browser"
+      ],
+      "files": [
+        "frontend/src/pages/recipes/detail.vue"
+      ],
+      "estimatedMinutes": 35,
+      "needsBrowserVerification": true
+    },
+    {
+      "id": "US-061",
+      "title": "实现详情页各区域",
+      "description": "实现详情页的各个内容区域",
+      "phase": 8,
+      "priority": 61,
+      "status": "pending",
+      "passes": false,
+      "dependencies": ["US-060"],
+      "completedAt": null,
+      "acceptanceCriteria": [
+        "封面图区域",
+        "基本信息区域",
+        "desc 区域（蓝色背景）",
+        "tip 区域（黄色背景）",
+        "体质区域（适合+禁忌）",
+        "功效/节气标签",
+        "食材列表（可展开折叠）",
+        "制作步骤",
+        "体质标签显示中文名",
+        "在浏览器中验证",
+        "Verify in browser"
+      ],
+      "files": [
+        "frontend/src/pages/recipes/detail.vue"
+      ],
+      "estimatedMinutes": 70,
+      "needsBrowserVerification": true
+    },
+    {
+      "id": "US-062",
+      "title": "创建前端 API 客户端",
+      "description": "创建菜谱 API 客户端模块",
+      "phase": 8,
+      "priority": 62,
+      "status": "pending",
+      "passes": false,
+      "dependencies": ["US-049"],
+      "completedAt": null,
+      "acceptanceCriteria": [
+        "创建 frontend/src/api/recipes.js",
+        "导出 API 函数",
+        "字段映射",
+        "体质映射",
+        "难度映射",
+        "统一错误处理",
+        "在浏览器控制台测试",
+        "Verify in browser"
+      ],
+      "files": [
+        "frontend/src/api/recipes.js"
+      ],
+      "estimatedMinutes": 40,
+      "needsBrowserVerification": true
+    },
+    {
+      "id": "US-063",
+      "title": "执行干运行测试",
+      "description": "执行干运行模式测试导入功能",
+      "phase": 9,
+      "priority": 63,
+      "status": "pending",
+      "passes": false,
+      "dependencies": ["US-039"],
+      "completedAt": null,
+      "acceptanceCriteria": [
+        "执行 --dry-run --limit 100",
+        "验证菜谱名称解析正确",
+        "验证时间解析正确",
+        "验证难度推测合理",
+        "验证食材解析正确",
+        "验证步骤解析正确",
+        "抽样检查 10 条输出",
+        "Tests pass"
+      ],
+      "files": [
+        "backend/scripts/import_recipes.py"
+      ],
+      "estimatedMinutes": 30
+    },
+    {
+      "id": "US-064",
+      "title": "正式导入数据",
+      "description": "执行完整的菜谱数据导入",
+      "phase": 9,
+      "priority": 64,
+      "status": "pending",
+      "passes": false,
+      "dependencies": ["US-038", "US-063"],
+      "completedAt": null,
+      "acceptanceCriteria": [
+        "执行完整导入",
+        "总菜谱数 > 12,500 (98%+)",
+        "有 desc 的 > 40%",
+        "有 tip 的 > 45%",
+        "有 difficulty 的 = 100%",
+        "有 suitable_constitutions 的 > 80%",
+        "有 efficacy_tags 的 > 80%",
+        "失败率 < 2%",
+        "抽样检查 10 条数据",
+        "Tests pass"
+      ],
+      "files": [],
+      "estimatedMinutes": 60
+    },
+    {
+      "id": "US-065",
+      "title": "验证智能字段质量",
+      "description": "验证智能填充的字段质量",
+      "phase": 9,
+      "priority": 65,
+      "status": "pending",
+      "passes": false,
+      "dependencies": ["US-064"],
+      "completedAt": null,
+      "acceptanceCriteria": [
+        "验证 difficulty 分布合理",
+        "验证 suitable_constitutions 包含平和质的 > 70%",
+        "验证 efficacy_tags 多样性 > 10 种",
+        "验证 solar_terms 包含标签的 > 50%",
+        "验证四季分布相对均衡",
+        "抽样检查 20 条人工验证",
+        "修正明显错误的规则",
+        "Tests pass"
+      ],
+      "files": [],
+      "estimatedMinutes": 45
+    },
+    {
+      "id": "US-066",
+      "title": "验收 - 字段完整性测试",
+      "description": "验证数据库字段完整性",
+      "phase": 10,
+      "priority": 66,
+      "status": "pending",
+      "passes": false,
+      "dependencies": ["US-064"],
+      "completedAt": null,
+      "acceptanceCriteria": [
+        "运行数据库验证脚本",
+        "difficulty 必须 100%",
+        "体质 >= 80%",
+        "功效 >= 80%",
+        "Tests pass"
+      ],
+      "files": [],
+      "estimatedMinutes": 20
+    },
+    {
+      "id": "US-067",
+      "title": "验收 - 图片匹配测试",
+      "description": "验证图片匹配功能",
+      "phase": 10,
+      "priority": 67,
+      "status": "pending",
+      "passes": false,
+      "dependencies": ["US-064"],
+      "completedAt": null,
+      "acceptanceCriteria": [
+        "验证图片匹配率 >= 30%",
+        "抽样验证 20 张图片文件存在",
+        "Tests pass"
+      ],
+      "files": [],
+      "estimatedMinutes": 25
+    },
+    {
+      "id": "US-068",
+      "title": "验收 - API 字段测试",
+      "description": "验证 API 返回字段正确性",
+      "phase": 10,
+      "priority": 68,
+      "status": "pending",
+      "passes": false,
+      "dependencies": ["US-050"],
+      "completedAt": null,
+      "acceptanceCriteria": [
+        "运行 API 测试",
+        "验证响应格式",
+        "验证必需字段存在",
+        "Tests pass"
+      ],
+      "files": [],
+      "estimatedMinutes": 20
+    },
+    {
+      "id": "US-069",
+      "title": "验收 - 功能入口测试",
+      "description": "验证前端功能入口",
+      "phase": 10,
+      "priority": 69,
+      "status": "pending",
+      "passes": false,
+      "dependencies": ["US-056"],
+      "completedAt": null,
+      "acceptanceCriteria": [
+        "验证首页食谱库卡片",
+        "验证图标、标题、描述、按钮",
+        "验证跳转功能",
+        "Verify in browser"
+      ],
+      "files": [],
+      "estimatedMinutes": 15,
+      "needsBrowserVerification": true
+    },
+    {
+      "id": "US-070",
+      "title": "验收 - 列表页功能测试",
+      "description": "验证列表页功能",
+      "phase": 10,
+      "priority": 70,
+      "status": "pending",
+      "passes": false,
+      "dependencies": ["US-057", "US-058", "US-059"],
+      "completedAt": null,
+      "acceptanceCriteria": [
+        "验证列表加载",
+        "验证体质筛选",
+        "验证节气筛选",
+        "验证难度筛选",
+        "验证卡片跳转",
+        "验证下拉刷新",
+        "验证滚动加载",
+        "Verify in browser"
+      ],
+      "files": [],
+      "estimatedMinutes": 30,
+      "needsBrowserVerification": true
+    },
+    {
+      "id": "US-071",
+      "title": "验收 - 详情页功能测试",
+      "description": "验证详情页功能",
+      "phase": 10,
+      "priority": 71,
+      "status": "pending",
+      "passes": false,
+      "dependencies": ["US-060", "US-061"],
+      "completedAt": null,
+      "acceptanceCriteria": [
+        "验证详情加载",
+        "验证封面图显示",
+        "验证 desc 区域蓝色背景",
+        "验证 tip 区域黄色背景",
+        "验证体质标签中文名",
+        "验证功效标签可点击",
+        "验证食材列表可展开",
+        "验证步骤显示",
+        "Verify in browser"
+      ],
+      "files": [],
+      "estimatedMinutes": 25,
+      "needsBrowserVerification": true
+    },
+    {
+      "id": "US-072",
+      "title": "验收 - 体质筛选测试",
+      "description": "验证体质筛选功能",
+      "phase": 10,
+      "priority": 72,
+      "status": "pending",
+      "passes": false,
+      "dependencies": ["US-058"],
+      "completedAt": null,
+      "acceptanceCriteria": [
+        "后端验证 curl 命令",
+        "前端验证筛选功能",
+        "测试各种体质",
+        "Verify in browser",
+        "Tests pass"
+      ],
+      "files": [],
+      "estimatedMinutes": 30,
+      "needsBrowserVerification": true
+    },
+    {
+      "id": "US-073",
+      "title": "验收 - 节气筛选测试",
+      "description": "验证节气筛选功能",
+      "phase": 10,
+      "priority": 73,
+      "status": "pending",
+      "passes": false,
+      "dependencies": ["US-058"],
+      "completedAt": null,
+      "acceptanceCriteria": [
+        "后端验证 curl 命令",
+        "前端验证筛选功能",
+        "测试各个季节",
+        "Verify in browser",
+        "Tests pass"
+      ],
+      "files": [],
+      "estimatedMinutes": 25,
+      "needsBrowserVerification": true
+    },
+    {
+      "id": "US-074",
+      "title": "验收 - 搜索功能测试",
+      "description": "验证搜索功能",
+      "phase": 10,
+      "priority": 74,
+      "status": "pending",
+      "passes": false,
+      "dependencies": ["US-052"],
+      "completedAt": null,
+      "acceptanceCriteria": [
+        "后端验证搜索 API",
+        "前端验证搜索功能",
+        "测试组合搜索",
+        "Verify in browser",
+        "Tests pass"
+      ],
+      "files": [],
+      "estimatedMinutes": 30,
+      "needsBrowserVerification": true
+    },
+    {
+      "id": "US-075",
+      "title": "验收 - 完整流程测试",
+      "description": "验证完整的用户使用流程",
+      "phase": 10,
+      "priority": 75,
+      "status": "pending",
+      "passes": false,
+      "dependencies": ["所有前端功能"],
+      "completedAt": null,
+      "acceptanceCriteria": [
+        "首页 → 食谱库",
+        "列表页 → 筛选",
+        "列表 → 详情",
+        "搜索功能",
+        "完整流程验证",
+        "Verify in browser",
+        "Tests pass"
+      ],
+      "files": [],
+      "estimatedMinutes": 30,
+      "needsBrowserVerification": true
+    }
+  ],
+  "qualityGates": {
+    "typecheck": "python -m mypy api/",
+    "tests": "python -m pytest tests/ -v",
+    "coverage": "python -m pytest tests/ --cov=api --cov-report=term-missing",
+    "minCoverage": 80,
+    "browserVerification": "前端功能需在浏览器中手动验证"
+  },
+  "commands": {
+    "checkProgress": "cat tasks/prd-recipes.json | jq '.userStories[] | {id, title, passes}'",
+    "checkPending": "cat tasks/prd-recipes.json | jq '.userStories[] | select(.passes == false)'",
+    "checkCompleted": "cat tasks/prd-recipes.json | jq '.userStories[] | select(.passes == true)'",
+    "calculateProgress": "cat tasks/prd-recipes.json | jq '[.userStories[] | select(.passes == true)] | length / (.userStories | length) * 100'"
+  },
+  "references": {
+    "ralph": "https://github.com/snarktank/ralph",
+    "claudeCode": "https://claude.com/claude-code",
+    "excelData": "source_data/dishes_list_ai_filled.xlsx",
+    "backendRoot": "backend/",
+    "frontendRoot": "frontend/"
+  }
+}
