@@ -8,6 +8,7 @@ import sys
 import os
 import pandas as pd
 from pathlib import Path
+from typing import Optional, List, Dict, Any
 
 # 添加项目根目录到路径
 project_root = Path(__file__).parent.parent
@@ -34,12 +35,342 @@ except ImportError as e:
     sys.exit(1)
 
 
+def read_excel_file(file_path: str, limit: Optional[int] = None) -> List[Dict[str, Any]]:
+    """
+    读取 Excel 文件并返回数据列表
+
+    Args:
+        file_path: Excel 文件路径
+        limit: 可选，限制返回的记录数量
+
+    Returns:
+        数据字典列表，每行数据转换为一个字典
+
+    Raises:
+        FileNotFoundError: 如果文件不存在
+        Exception: 如果读取文件失败
+    """
+    if not os.path.exists(file_path):
+        raise FileNotFoundError(f"文件不存在: {file_path}")
+
+    try:
+        df = pd.read_excel(file_path, sheet_name='Sheet1', engine='openpyxl')
+    except Exception as e:
+        raise Exception(f"读取 Excel 失败: {e}")
+
+    # 跳过 title 为空的行
+    df = df.dropna(subset=['title'])
+
+    # 应用数量限制
+    if limit is not None:
+        df = df.head(limit)
+
+    # 转换为字典列表
+    return df.to_dict('records')
+
+
+def check_recipe_exists(name: str, db: Session) -> bool:
+    """
+    检查菜谱是否已存在
+
+    Args:
+        name: 菜谱名称
+        db: 数据库会话
+
+    Returns:
+        True 如果菜谱已存在，False 否则
+    """
+    recipe = db.query(Recipe).filter(Recipe.name == name.strip()).first()
+    return recipe is not None
+
+
+def get_or_create_ingredient(name: str, db: Session) -> Ingredient:
+    """
+    查找或创建食材
+
+    Args:
+        name: 食材名称
+        db: 数据库会话
+
+    Returns:
+        Ingredient 实例
+    """
+    # 按名称精确查找
+    ingredient = db.query(Ingredient).filter(Ingredient.name == name.strip()).first()
+    if ingredient:
+        return ingredient
+
+    # 按别名查找
+    # 这里简化处理，直接创建新食材
+    ingredient = Ingredient(
+        name=name.strip(),
+        name_en=None,
+        category=None,
+        nature=None,
+        taste=None,
+        suitable_constitutions=[],
+        avoid_constitutions=[],
+        efficacy_tags=[],
+        description=None,
+        aliases=[]
+    )
+    db.add(ingredient)
+    db.flush()
+    return ingredient
+
+
+def import_single_recipe(row: Dict[str, Any], db: Session) -> Optional[Recipe]:
+    """
+    导入单条菜谱
+
+    Args:
+        row: Excel 行数据字典
+        db: 数据库会话
+
+    Returns:
+        Recipe 实例，如果已存在返回 None
+    """
+    # 检查是否已存在
+    name = str(row.get('title', '')).strip()
+    if not name:
+        return None
+
+    if check_recipe_exists(name, db):
+        return None
+
+    # 解析数据
+    cooking_time = parse_cooking_time(row.get('costtime'))
+
+    # 解析难度
+    difficulty = parse_difficulty_value(row.get('difficulty'))
+    if difficulty is None:
+        # 根据烹饪时间推测
+        if cooking_time <= 30:
+            difficulty = 'easy'
+        elif cooking_time <= 60:
+            difficulty = 'medium'
+        elif cooking_time <= 120:
+            difficulty = 'harder'
+        else:
+            difficulty = 'hard'
+
+    # 解析体质
+    suitable_constitutions = parse_json_field(row.get('suitable_constitutions'))
+    avoid_constitutions = parse_json_field(row.get('avoid_constitutions'))
+
+    # 解析标签
+    efficacy_tags = parse_json_field(row.get('efficacy_tags'))
+    solar_terms = parse_json_field(row.get('solar_terms'))
+    if solar_terms:
+        solar_terms = [s for s in solar_terms if s in SOLAR_TERMS]
+        if not solar_terms:
+            solar_terms = None
+
+    # 创建菜谱
+    recipe = Recipe(
+        name=name,
+        description=str(row.get('desc', '')).strip() if row.get('desc') and not pd.isna(row.get('desc')) else None,
+        desc=str(row.get('desc', '')).strip() if row.get('desc') and not pd.isna(row.get('desc')) else None,
+        tip=str(row.get('tip', '')).strip() if row.get('tip') and not pd.isna(row.get('tip')) else None,
+        cooking_time=cooking_time,
+        difficulty=difficulty,
+        suitable_constitutions=suitable_constitutions,
+        avoid_constitutions=avoid_constitutions,
+        efficacy_tags=efficacy_tags,
+        solar_terms=solar_terms,
+        servings=2,
+        is_published=True,
+        view_count=0
+    )
+
+    db.add(recipe)
+    db.flush()  # 获取 recipe.id
+
+    # 解析并添加食材
+    ingredients = parse_ingredients(row.get('QuantityIngredients'))
+    for ing in ingredients:
+        ingredient = get_or_create_ingredient(ing['name'], db)
+        recipe_ing = RecipeIngredient(
+            recipe_id=recipe.id,
+            ingredient_id=ingredient.id,
+            ingredient_name=ing['name'],
+            amount=ing['amount'],
+            is_main=ing['is_main'],
+            display_order=ing['display_order']
+        )
+        db.add(recipe_ing)
+
+    # 解析并添加步骤
+    steps = parse_steps(row.get('steptext'))
+    for step in steps:
+        recipe_step = RecipeStep(
+            recipe_id=recipe.id,
+            step_number=step['step_number'],
+            description=step['description'],
+            duration=step.get('duration')
+        )
+        db.add(recipe_step)
+
+    db.commit()
+    return recipe
+
+
+def import_recipes(file_path: str, limit: Optional[int] = None, dry_run: bool = False) -> Dict[str, Any]:
+    """
+    批量导入菜谱
+
+    Args:
+        file_path: Excel 文件路径
+        limit: 可选，限制导入数量
+        dry_run: 模拟运行，不实际写入数据库
+
+    Returns:
+        导入统计字典: {total: N, success: X, skipped: Y, failed: Z, errors: [...]}
+    """
+    # 读取 Excel
+    rows = read_excel_file(file_path, limit)
+
+    stats = {
+        'total': 0,
+        'success': 0,
+        'skipped': 0,
+        'failed': 0,
+        'errors': []
+    }
+
+    db = SessionLocal()
+
+    try:
+        for idx, row in enumerate(rows):
+            stats['total'] += 1
+
+            try:
+                if dry_run:
+                    # 模拟运行，只检查是否已存在
+                    name = str(row.get('title', '')).strip()
+                    if name and check_recipe_exists(name, db):
+                        stats['skipped'] += 1
+                    else:
+                        stats['success'] += 1
+                else:
+                    # 正式导入
+                    recipe = import_single_recipe(row, db)
+                    if recipe is None:
+                        stats['skipped'] += 1
+                    else:
+                        stats['success'] += 1
+
+                # 每 100 条打印进度
+                if (stats['success'] + stats['skipped'] + stats['failed']) % 100 == 0:
+                    print(f"进度: 成功 {stats['success']}, 跳过 {stats['skipped']}, 失败 {stats['failed']}")
+
+            except Exception as e:
+                stats['failed'] += 1
+                error_msg = f"{row.get('title', 'Unknown')}: {str(e)}"
+                stats['errors'].append(error_msg)
+                db.rollback()
+
+    finally:
+        db.close()
+
+    return stats
+
+
+def dry_run_import(file_path: str, limit: Optional[int] = None) -> None:
+    """
+    干运行模式，打印解析结果但不写入数据库
+
+    Args:
+        file_path: Excel 文件路径
+        limit: 可选，限制处理的记录数量
+    """
+    rows = read_excel_file(file_path, limit)
+
+    print(f"\n{'='*60}")
+    print(f"干运行模式 - 共 {len(rows)} 条记录")
+    print(f"{'='*60}\n")
+
+    for idx, row in enumerate(rows):
+        print(f"\n--- 记录 {idx + 1} ---")
+        print(f"标题: {row.get('title', 'N/A')}")
+        print(f"描述: {str(row.get('desc', ''))[:50]}..." if row.get('desc') else "描述: N/A")
+        print(f"烹饪时间: {row.get('costtime', 'N/A')}")
+
+        # 解析并显示字段
+        cooking_time = parse_cooking_time(row.get('costtime'))
+        print(f"解析后时间: {cooking_time} 分钟")
+
+        difficulty = parse_difficulty_value(row.get('difficulty'))
+        print(f"难度: {difficulty or 'N/A'}")
+
+        constitutions = parse_json_field(row.get('suitable_constitutions'))
+        print(f"适合体质: {constitutions or 'N/A'}")
+
+        efficacy_tags = parse_json_field(row.get('efficacy_tags'))
+        print(f"功效标签: {efficacy_tags or 'N/A'}")
+
+        solar_terms = parse_json_field(row.get('solar_terms'))
+        print(f"节气标签: {solar_terms or 'N/A'}")
+
+        ingredients = parse_ingredients(row.get('QuantityIngredients'))
+        print(f"食材数量: {len(ingredients)}")
+        if ingredients:
+            for ing in ingredients[:3]:  # 只显示前3个
+                print(f"  - {ing['name']}: {ing['amount']}")
+            if len(ingredients) > 3:
+                print(f"  ... 还有 {len(ingredients) - 3} 个食材")
+
+        steps = parse_steps(row.get('steptext'))
+        print(f"步骤数量: {len(steps)}")
+
+    print(f"\n{'='*60}")
+    print(f"干运行完成")
+    print(f"{'='*60}")
+
+
+def export_failed_recipes(failed: List[Dict[str, Any]], output_path: str) -> None:
+    """
+    导出失败的菜谱到 CSV 文件
+
+    Args:
+        failed: 失败记录列表，每个元素包含 {title: str, error: str}
+        output_path: 输出 CSV 文件路径
+    """
+    import csv
+
+    # 准备数据
+    headers = ['title', 'error']
+    rows = []
+    for item in failed:
+        # item 可能是字符串 "title: error" 或字典
+        if isinstance(item, dict):
+            rows.append([item.get('title', 'N/A'), item.get('error', 'N/A')])
+        elif isinstance(item, str):
+            # 解析 "title: error" 格式
+            parts = item.split(':', 1)
+            if len(parts) == 2:
+                rows.append([parts[0].strip(), parts[1].strip()])
+            else:
+                rows.append([item, 'N/A'])
+        else:
+            rows.append([str(item), 'N/A'])
+
+    # 写入 CSV 文件 (UTF-8 with BOM)
+    with open(output_path, 'w', encoding='utf-8-sig', newline='') as f:
+        writer = csv.writer(f)
+        writer.writerow(headers)
+        writer.writerows(rows)
+
+    print(f"已导出 {len(rows)} 条失败记录到: {output_path}")
+
+
 class RecipeImporter:
     """菜谱导入器"""
 
-    def __init__(self, excel_path: str, db: Session):
+    def __init__(self, excel_path: str, db: Session, verbose: bool = False):
         self.excel_path = excel_path
         self.db = db
+        self.verbose = verbose
         self.stats = {
             'total': 0,
             'success': 0,
@@ -47,6 +378,11 @@ class RecipeImporter:
             'failed': 0,
             'errors': []
         }
+
+    def log(self, message: str, level: str = "info"):
+        """输出日志"""
+        if self.verbose or level in ["error", "warning"]:
+            print(f"[{level.upper()}] {message}")
 
     def validate_and_clean_data(self, df: pd.DataFrame) -> pd.DataFrame:
         """验证和清理数据"""
@@ -271,6 +607,7 @@ def main():
     parser.add_argument('--file', default='../source_data/dishes_list_ai_filled.xlsx', help='Excel 文件路径')
     parser.add_argument('--dry-run', action='store_true', help='模拟运行，不实际导入')
     parser.add_argument('--limit', type=int, help='限制导入数量（测试用）')
+    parser.add_argument('--verbose', '-v', action='store_true', help='详细输出模式')
     args = parser.parse_args()
 
     # 检查文件是否存在
@@ -306,7 +643,7 @@ def main():
 
     try:
         # 导入
-        importer = RecipeImporter(args.file, db)
+        importer = RecipeImporter(args.file, db, verbose=args.verbose)
         df = importer.validate_and_clean_data(df)
         importer.import_recipes(df, dry_run=args.dry_run)
         importer.print_summary()
