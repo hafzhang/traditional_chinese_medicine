@@ -7,9 +7,27 @@ from sqlalchemy import Column, String, Integer, Float, Boolean, DateTime, Foreig
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.types import TypeDecorator, Text
+from sqlalchemy.dialects.sqlite import JSON as SQLiteJSON
 import uuid
+import json
 
 from api.database import Base
+
+
+class JSONString(Text):
+    """Custom JSON type that stores Chinese characters directly instead of Unicode escapes"""
+    cache_ok = True
+
+    def process_bind_param(self, value, dialect):
+        if value is not None:
+            return json.dumps(value, ensure_ascii=False)
+        return value
+
+    def process_result_value(self, value, dialect):
+        if value is not None:
+            return json.loads(value)
+        return value
 
 
 class User(Base):
@@ -200,23 +218,23 @@ class Recipe(Base):
     zid = Column(Integer)  # 分类/分组ID
 
     # 体质关联（与现有系统对接）
-    suitable_constitutions = Column(JSON, index=True)  # 适用体质，如 ["qi_deficiency"]
-    avoid_constitutions = Column(JSON)  # 禁忌体质，如 ["phlegm_damp"]
+    suitable_constitutions = Column(JSONString, index=True)  # 适用体质，如 ["qi_deficiency"]
+    avoid_constitutions = Column(JSONString)  # 禁忌体质，如 ["phlegm_damp"]
     symptoms = Column(JSON)  # 主治症状，如 ["食欲不振", "疲劳乏力"]
     suitable_seasons = Column(JSON)  # 适用季节，如 ["春", "秋", "冬"]
 
     # 食材和步骤
-    ingredients = Column(JSON)  # {main: [...], auxiliary: [...], seasoning: [...]}
-    steps = Column(JSON)  # 制作步骤列表
+    ingredients = Column(JSONString)  # {main: [...], auxiliary: [...], seasoning: [...]}
+    steps = Column(JSONString)  # 制作步骤列表
 
     # 功效说明
     efficacy = Column(Text)  # 功效，如 "健脾养胃、补肺益气"
-    efficacy_tags = Column(JSON)  # 功效标签，如 ["健脾", "养胃"]
+    efficacy_tags = Column(JSONString)  # 功效标签，如 ["健脾", "养胃"]
     health_benefits = Column(Text)  # 健康益处
     precautions = Column(Text)  # 注意事项
 
     # PRD 新增字段
-    solar_terms = Column(JSON)  # 节气标签，如 ["立冬", "小雪"]
+    solar_terms = Column(JSONString)  # 节气标签，如 ["立冬", "小雪"]
     confidence = Column(Float)  # AI 置信度分数
     is_published = Column(Boolean, default=True)  # 是否发布
 

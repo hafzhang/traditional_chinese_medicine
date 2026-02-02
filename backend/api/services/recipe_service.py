@@ -5,10 +5,12 @@ Recipe Service
 
 import logging
 from typing import List, Dict, Any, Optional
-from sqlalchemy.orm import Session, joinedload
+from sqlalchemy.orm import Session
 from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy import or_
 
 from api.models import Recipe, RecipeIngredient, RecipeStep
+from sqlalchemy.orm import joinedload
 
 # 配置日志
 logger = logging.getLogger(__name__)
@@ -26,17 +28,17 @@ class RecipeService:
     # 难度级别
     DIFFICULTY_LEVELS = ["easy", "medium", "harder", "hard"]
 
-    # 四季到节气映射
+    # 四季到节气映射 (使用中文名)
     SEASON_TO_SOLAR_TERMS = {
-        'spring': ['lichun', 'yushui', 'jingzhe', 'chunfen', 'qingming', 'guyu'],
-        'summer': ['lixia', 'xiaoman', 'mangzhong', 'xiazhi', 'xiaoshu', 'dashu', 'changxia'],
-        'autumn': ['liqiu', 'chushu', 'bailu', 'qiufen', 'hanlu', 'shuangjiang'],
-        'winter': ['lidong', 'xiaoxue', 'daxue', 'dongzhi', 'xiaohan', 'dahan'],
+        'spring': ['立春', '雨水', '惊蛰', '春分', '清明', '谷雨'],
+        'summer': ['立夏', '小满', '芒种', '夏至', '小暑', '大暑', '长夏'],
+        'autumn': ['立秋', '处暑', '白露', '秋分', '寒露', '霜降'],
+        'winter': ['立冬', '小雪', '大雪', '冬至', '小寒', '大寒'],
     }
 
-    def get_recipe_by_id(self, recipe_id: int, db: Session) -> Optional[Recipe]:
+    def get_recipe_by_id(self, recipe_id: str, db: Session) -> Optional[Recipe]:
         """
-        根据ID获取食谱详情（预加载食材和步骤）
+        根据ID获取食谱详情
 
         Args:
             recipe_id: 食谱ID
@@ -47,14 +49,82 @@ class RecipeService:
         """
         logger.info(f"Fetching recipe with id: {recipe_id}")
         try:
-            result = db.query(Recipe).options(
-                joinedload(Recipe.ingredients),
-                joinedload(Recipe.steps)
-            ).filter(Recipe.id == recipe_id).first()
+            # ingredients 和 steps 是 JSON 列，会自动加载，不需要 joinedload
+            result = db.query(Recipe).filter(Recipe.id == recipe_id).first()
             logger.debug(f"Found recipe: {result.name if result else 'None'}")
             return result
         except SQLAlchemyError as e:
             logger.error(f"Database error fetching recipe {recipe_id}: {e}")
+            raise
+
+    def get_recipe_detail_with_ingredients_steps(self, recipe_id: str, db: Session) -> Optional[Dict[str, Any]]:
+        """
+        根据ID获取食谱详情（包含食材和步骤）
+
+        Args:
+            recipe_id: 食谱ID
+            db: 数据库会话
+
+        Returns:
+            包含食谱详情、食材和步骤的字典，如果找不到返回None
+        """
+        logger.info(f"Fetching recipe detail with ingredients and steps for id: {recipe_id}")
+        try:
+            # 获取食谱基本信息
+            recipe = db.query(Recipe).filter(Recipe.id == recipe_id).first()
+
+            if not recipe:
+                logger.warning(f"Recipe not found: {recipe_id}")
+                return None
+
+            # 获取食材
+            ingredients = db.query(RecipeIngredient).filter(
+                RecipeIngredient.recipe_id == recipe_id
+            ).order_by(RecipeIngredient.display_order).all()
+
+            # 获取步骤
+            steps = db.query(RecipeStep).filter(
+                RecipeStep.recipe_id == recipe_id
+            ).order_by(RecipeStep.step_number).all()
+
+            # 格式化食材
+            ingredients_list = []
+            for ing in ingredients:
+                ingredients_list.append({
+                    "name": ing.ingredient_name,
+                    "amount": ing.amount,
+                    "is_main": ing.is_main,
+                    "display_order": ing.display_order
+                })
+
+            # 格式化步骤
+            steps_list = []
+            for step in steps:
+                steps_list.append({
+                    "step_number": step.step_number,
+                    "description": step.description,
+                    "duration": step.duration
+                })
+
+            return {
+                "id": recipe.id,
+                "name": recipe.name,
+                "desc": getattr(recipe, 'desc', None),
+                "tip": getattr(recipe, 'tip', None),
+                "cooking_time": recipe.cooking_time,
+                "difficulty": recipe.difficulty,
+                "servings": recipe.servings,
+                "suitable_constitutions": recipe.suitable_constitutions,
+                "avoid_constitutions": recipe.avoid_constitutions,
+                "efficacy_tags": recipe.efficacy_tags,
+                "solar_terms": recipe.solar_terms,
+                "cover_image": recipe.cover_image,
+                "ingredients": ingredients_list,
+                "steps": steps_list,
+                "view_count": recipe.view_count
+            }
+        except SQLAlchemyError as e:
+            logger.error(f"Database error fetching recipe detail {recipe_id}: {e}")
             raise
 
     def get_recipes(
@@ -112,7 +182,6 @@ class RecipeService:
                 solar_terms = self.SEASON_TO_SOLAR_TERMS.get(season, [])
                 if solar_terms:
                     # 匹配季节中的任一节气 (SQLite JSON 不支持 overlap，使用 any)
-                    from sqlalchemy import or_
                     conditions = [Recipe.solar_terms.contains(st) for st in solar_terms]
                     query = query.filter(or_(*conditions))
 
@@ -225,7 +294,6 @@ class RecipeService:
             raise ValueError(f"Invalid difficulty level: {difficulty}")
 
         # 构建查询 - 搜索名称和功效标签
-        from sqlalchemy import or_
         query = db.query(Recipe).filter(
             or_(
                 Recipe.name.contains(keyword),

@@ -6,13 +6,16 @@
 
 import sys
 import os
+import json
 import pandas as pd
 from pathlib import Path
 from typing import Optional, List, Dict, Any
 
 # 添加项目根目录到路径
 project_root = Path(__file__).parent.parent
+scripts_dir = Path(__file__).parent
 sys.path.insert(0, str(project_root))
+sys.path.insert(0, str(scripts_dir))
 
 from api.database import SessionLocal, Base, engine
 from api.models import Recipe, RecipeIngredient, RecipeStep, Ingredient
@@ -104,15 +107,14 @@ def get_or_create_ingredient(name: str, db: Session) -> Ingredient:
     # 这里简化处理，直接创建新食材
     ingredient = Ingredient(
         name=name.strip(),
-        name_en=None,
         category=None,
         nature=None,
-        taste=None,
-        suitable_constitutions=[],
-        avoid_constitutions=[],
-        efficacy_tags=[],
-        description=None,
-        aliases=[]
+        flavor=None,
+        suitable_constitutions=None,
+        avoid_constitutions=None,
+        efficacy=None,
+        nutrition=None,
+        aliases=None
     )
     db.add(ingredient)
     db.flush()
@@ -166,6 +168,12 @@ def import_single_recipe(row: Dict[str, Any], db: Session) -> Optional[Recipe]:
         if not solar_terms:
             solar_terms = None
 
+    # Convert lists to JSON strings explicitly (workaround for SQLite JSON binding issue)
+    suitable_constitutions_json = json.dumps(suitable_constitutions, ensure_ascii=False) if suitable_constitutions else None
+    avoid_constitutions_json = json.dumps(avoid_constitutions, ensure_ascii=False) if avoid_constitutions else None
+    efficacy_tags_json = json.dumps(efficacy_tags, ensure_ascii=False) if efficacy_tags else None
+    solar_terms_json = json.dumps(solar_terms, ensure_ascii=False) if solar_terms else None
+
     # 创建菜谱
     recipe = Recipe(
         name=name,
@@ -174,10 +182,10 @@ def import_single_recipe(row: Dict[str, Any], db: Session) -> Optional[Recipe]:
         tip=str(row.get('tip', '')).strip() if row.get('tip') and not pd.isna(row.get('tip')) else None,
         cooking_time=cooking_time,
         difficulty=difficulty,
-        suitable_constitutions=suitable_constitutions,
-        avoid_constitutions=avoid_constitutions,
-        efficacy_tags=efficacy_tags,
-        solar_terms=solar_terms,
+        suitable_constitutions=suitable_constitutions_json,
+        avoid_constitutions=avoid_constitutions_json,
+        efficacy_tags=efficacy_tags_json,
+        solar_terms=solar_terms_json,
         servings=2,
         is_published=True,
         view_count=0
@@ -513,6 +521,12 @@ class RecipeImporter:
                     if not solar_terms:
                         solar_terms = None
 
+                # Convert lists to JSON strings explicitly (workaround for SQLite JSON binding issue)
+                suitable_constitutions_json = json.dumps(suitable_constitutions, ensure_ascii=False) if suitable_constitutions else None
+                avoid_constitutions_json = json.dumps(avoid_constitutions, ensure_ascii=False) if avoid_constitutions else None
+                efficacy_tags_json = json.dumps(efficacy_tags, ensure_ascii=False) if efficacy_tags else None
+                solar_terms_json = json.dumps(solar_terms, ensure_ascii=False) if solar_terms else None
+
                 # 创建菜谱
                 recipe = Recipe(
                     name=str(row['title']).strip(),
@@ -527,10 +541,10 @@ class RecipeImporter:
                     cooking_time=cooking_time,  # PRD 标准字段
                     difficulty=difficulty,
                     servings=2,  # Default value since Excel doesn't have servings column
-                    suitable_constitutions=suitable_constitutions,
-                    avoid_constitutions=avoid_constitutions,
-                    efficacy_tags=efficacy_tags,
-                    solar_terms=solar_terms,
+                    suitable_constitutions=suitable_constitutions_json,
+                    avoid_constitutions=avoid_constitutions_json,
+                    efficacy_tags=efficacy_tags_json,
+                    solar_terms=solar_terms_json,
                     cover_image=None,  # No cover_image column in Excel
                     confidence=float(row['confidence']) if 'confidence' in row and not pd.isna(row['confidence']) else None,
                     cooking_method=str(row['method']).strip() if 'method' in row and not pd.isna(row['method']) else None,

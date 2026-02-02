@@ -7,3 +7,4 @@ from api.routers.health import router as health_router
 
 
 __all__ = ["constitution_router", "health_router"]
+

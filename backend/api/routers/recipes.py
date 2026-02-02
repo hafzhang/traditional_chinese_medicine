@@ -216,43 +216,37 @@ async def get_recommendations(
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
-@router.get("/{recipe_id}", response_model=RecipeDetailResponse)
+@router.get("/test")
+async def test_endpoint():
+    """测试端点"""
+    return {"code": 0, "message": "Router is working!", "data": None}
+
+
+@router.get("/detail/{recipe_id}", response_model=RecipeDetailResponse)
 async def get_recipe_detail(
-    recipe_id: int,
+    recipe_id: str,
     db: Session = Depends(get_db)
 ) -> Dict[str, Any]:
     """
-    获取食谱详情
+    获取食谱详情（包含食材和步骤）
+
+    Args:
+        recipe_id: 食谱UUID字符串
+        db: 数据库会话
     """
     logger.info(f"API: get_recipe_detail called with recipe_id={recipe_id}")
 
     try:
         recipe_service = get_recipe_service()
-        recipe = recipe_service.get_recipe_by_id(recipe_id, db)
+        result = recipe_service.get_recipe_detail_with_ingredients_steps(recipe_id, db)
 
-        if not recipe:
+        if not result:
             raise HTTPException(status_code=404, detail="Recipe not found")
 
         return {
             "code": 0,
             "message": "Success",
-            "data": {
-                "id": recipe.id,
-                "name": recipe.name,
-                "desc": getattr(recipe, 'desc', None),
-                "tip": getattr(recipe, 'tip', None),
-                "cooking_time": recipe.cooking_time,
-                "difficulty": recipe.difficulty,
-                "servings": recipe.servings,
-                "suitable_constitutions": recipe.suitable_constitutions,
-                "avoid_constitutions": recipe.avoid_constitutions,
-                "efficacy_tags": recipe.efficacy_tags,
-                "solar_terms": recipe.solar_terms,
-                "cover_image": recipe.cover_image,
-                "ingredients": recipe.ingredients,
-                "steps": recipe.steps,
-                "view_count": recipe.view_count
-            }
+            "data": result
         }
     except HTTPException:
         raise

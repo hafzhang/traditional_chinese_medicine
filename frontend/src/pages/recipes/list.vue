@@ -27,6 +27,38 @@
       </scroll-view>
 
       <scroll-view scroll-x class="filter-scroll">
+        <view class="filter-label">功效:</view>
+        <view class="filter-item" :class="{ active: !selectedEfficacy }" @click="selectEfficacy('')">
+          全部
+        </view>
+        <view
+          v-for="item in commonEfficacyTags"
+          :key="item"
+          class="filter-item"
+          :class="{ active: selectedEfficacy === item }"
+          @click="selectEfficacy(item)"
+        >
+          {{ item }}
+        </view>
+      </scroll-view>
+
+      <scroll-view scroll-x class="filter-scroll">
+        <view class="filter-label">节气:</view>
+        <view class="filter-item" :class="{ active: !selectedSolarTerm }" @click="selectSolarTerm('')">
+          全部
+        </view>
+        <view
+          v-for="item in solarTerms"
+          :key="item.value"
+          class="filter-item"
+          :class="{ active: selectedSolarTerm === item.value }"
+          @click="selectSolarTerm(item.value)"
+        >
+          {{ item.label }}
+        </view>
+      </scroll-view>
+
+      <scroll-view scroll-x class="filter-scroll">
         <view class="filter-label">季节:</view>
         <view class="filter-item" :class="{ active: !selectedSeason }" @click="selectSeason('')">
           全部
@@ -118,16 +150,25 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
-import { getRecipesList, CONSTITUTIONS, SEASONS, DIFFICULTIES, getConstitutionName, getDifficultyName } from '@/api/recipes.js'
+import { getRecipesList, CONSTITUTIONS, SEASONS, DIFFICULTIES, SOLAR_TERMS, getConstitutionName, getDifficultyName } from '@/api/recipes.js'
 
 // 数据
 const recipes = ref([])
 const constitutions = ref(CONSTITUTIONS)
 const seasons = ref(SEASONS)
 const difficulties = ref(DIFFICULTIES)
+const solarTerms = ref(SOLAR_TERMS)
+// 常用功效标签（从后端数据中选取的常见标签）
+const commonEfficacyTags = ref([
+  '补气', '补血', '滋阴', '助阳', '健脾', '养胃',
+  '润肺', '补肾', '疏肝', '安神', '祛湿', '清热',
+  '消食', '止咳', '化痰', '美容', '瘦身'
+])
 const selectedConstitution = ref('')
 const selectedSeason = ref('')
 const selectedDifficulty = ref('')
+const selectedEfficacy = ref('')
+const selectedSolarTerm = ref('')
 const loading = ref(false)
 const refreshing = ref(false)
 const hasMore = ref(true)
@@ -176,6 +217,12 @@ async function loadData(reset = true) {
     if (selectedDifficulty.value) {
       params.difficulty = selectedDifficulty.value
     }
+    if (selectedEfficacy.value) {
+      params.efficacy = selectedEfficacy.value
+    }
+    if (selectedSolarTerm.value) {
+      params.solar_term = selectedSolarTerm.value
+    }
 
     const res = await getRecipesList(params)
 
@@ -216,6 +263,18 @@ function selectSeason(value) {
 // 选择难度
 function selectDifficulty(value) {
   selectedDifficulty.value = value
+  loadData(true)
+}
+
+// 选择功效
+function selectEfficacy(value) {
+  selectedEfficacy.value = value
+  loadData(true)
+}
+
+// 选择节气
+function selectSolarTerm(value) {
+  selectedSolarTerm.value = value
   loadData(true)
 }
 

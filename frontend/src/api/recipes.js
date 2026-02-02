@@ -99,6 +99,40 @@ export const DIFFICULTIES = [
 ]
 
 /**
+ * 二十四节气列表
+ */
+export const SOLAR_TERMS = [
+  // 春季节气
+  { value: 'lichun', label: '立春', season: 'spring' },
+  { value: 'yushui', label: '雨水', season: 'spring' },
+  { value: 'jingzhe', label: '惊蛰', season: 'spring' },
+  { value: 'chunfen', label: '春分', season: 'spring' },
+  { value: 'qingming', label: '清明', season: 'spring' },
+  { value: 'guyu', label: '谷雨', season: 'spring' },
+  // 夏季节气
+  { value: 'lixia', label: '立夏', season: 'summer' },
+  { value: 'xiaoman', label: '小满', season: 'summer' },
+  { value: 'mangzhong', label: '芒种', season: 'summer' },
+  { value: 'xiazhi', label: '夏至', season: 'summer' },
+  { value: 'xiaoshu', label: '小暑', season: 'summer' },
+  { value: 'dashu', label: '大暑', season: 'summer' },
+  // 秋季节气
+  { value: 'liqiu', label: '立秋', season: 'autumn' },
+  { value: 'chushu', label: '处暑', season: 'autumn' },
+  { value: 'bailu', label: '白露', season: 'autumn' },
+  { value: 'qiufen', label: '秋分', season: 'autumn' },
+  { value: 'hanlu', label: '寒露', season: 'autumn' },
+  { value: 'shuangjiang', label: '霜降', season: 'autumn' },
+  // 冬季节气
+  { value: 'lidong', label: '立冬', season: 'winter' },
+  { value: 'xiaoxue', label: '小雪', season: 'winter' },
+  { value: 'daxue', label: '大雪', season: 'winter' },
+  { value: 'dongzhi', label: '冬至', season: 'winter' },
+  { value: 'xiaohan', label: '小寒', season: 'winter' },
+  { value: 'dahan', label: '大寒', season: 'winter' }
+]
+
+/**
  * 获取体质中文名称
  * @param {string} code - 体质代码
  * @returns {string}
@@ -136,6 +170,7 @@ export default {
   CONSTITUTIONS,
   SEASONS,
   DIFFICULTIES,
+  SOLAR_TERMS,
   getConstitutionName,
   getDifficultyName,
   getDifficultyColor

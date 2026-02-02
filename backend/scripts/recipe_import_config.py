@@ -61,19 +61,44 @@ EFFICACY_TAGS = [
     '润肺', '补肾', '清热', '解毒', '止痛'
 ]
 
-# 节气标签列表 (24节气)
+# 节气标签列表 (24节气) - 包含代码和中文名称
 SOLAR_TERMS = [
-    # 春季
-    'lichun', 'yushui', 'jingzhe', 'chunfen', 'qingming', 'guyu',
+    # 春季 (代码和中文名称)
+    'lichun', '立春',
+    'yushui', '雨水',
+    'jingzhe', '惊蛰',
+    'chunfen', '春分',
+    'qingming', '清明',
+    'guyu', '谷雨',
     # 夏季
-    'lixia', 'xiaoman', 'mangzhong', 'xiazhi', 'xiaoshu', 'dashu',
+    'lixia', '立夏',
+    'xiaoman', '小满',
+    'mangzhong', '芒种',
+    'xiazhi', '夏至',
+    'xiaoshu', '小暑',
+    'dashu', '大暑',
     # 秋季
-    'liqiu', 'chushu', 'bailu', 'qiufen', 'hanlu', 'shuangjiang',
+    'liqiu', '立秋',
+    'chushu', '处暑',
+    'bailu', '白露',
+    'qiufen', '秋分',
+    'hanlu', '寒露',
+    'shuangjiang', '霜降',
     # 冬季
-    'lidong', 'xiaoxue', 'daxue', 'dongzhi', 'xiaohan', 'dahan',
+    'lidong', '立冬',
+    'xiaoxue', '小雪',
+    'daxue', '大雪',
+    'dongzhi', '冬至',
+    'xiaohan', '小寒',
+    'dahan', '大寒',
+    # 四季
+    'spring', '春季',
+    'summer', '夏季',
+    'autumn', '秋季',
+    'winter', '冬季',
 ]
 
-# 节气中文名称列表
+# 节气中文名称列表 (保留用于向后兼容)
 SOLAR_TERMS_CN = [
     # 四季
     '春季', '夏季', '秋季', '冬季',
