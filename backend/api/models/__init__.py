@@ -3,13 +3,31 @@ Database Models
 数据库模型定义 - SQLite 兼容版本
 """
 
-from sqlalchemy import Column, String, Integer, Float, Boolean, DateTime, ForeignKey, Text, JSON, Index
+from sqlalchemy import Column, String, Integer, Float, Boolean, DateTime, ForeignKey, Text, JSON, UniqueConstraint, Index
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.types import TypeDecorator, Text
+from sqlalchemy.dialects.sqlite import JSON as SQLiteJSON
 import uuid
+import json
 
 from api.database import Base
+
+
+class JSONString(Text):
+    """Custom JSON type that stores Chinese characters directly instead of Unicode escapes"""
+    cache_ok = True
+
+    def process_bind_param(self, value, dialect):
+        if value is not None:
+            return json.dumps(value, ensure_ascii=False)
+        return value
+
+    def process_result_value(self, value, dialect):
+        if value is not None:
+            return json.loads(value)
+        return value
 
 
 class User(Base):
@@ -186,21 +204,34 @@ class Recipe(Base):
     __tablename__ = "recipes"
 
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
-    zid = Column(Integer, index=True)  # Excel中的分类ID/分组ID
-    name = Column(String(200), nullable=False, unique=True)  # 增加长度，添加唯一约束
+
+    name = Column(String(200), nullable=False, unique=True, index=True)
     type = Column(String(50))  # 类型：粥类、汤类、茶饮、菜肴、主食、甜品小吃
-    difficulty = Column(String(20))  # 难度：简单、中等、较难、困难
-    cooking_time = Column(Integer)  # 烹饪时间（分钟）
+    difficulty = Column(String(20), index=True)  # 难度：简单、中等、困难 -> easy/medium/harder/hard
+    cook_time = Column(Integer, index=True)  # 烹饪时间（分钟）- 保留用于向后兼容
+    cooking_time = Column(Integer, index=True)  # 烹饪时间（分钟）- PRD 标准字段名
+
     servings = Column(Integer)  # 份量
 
+    # PRD 字段
+    desc = Column(Text)  # 个人体验/简介
+    tip = Column(Text)  # 烹饪贴士
+    cover_image = Column(String(255))  # 封面图片
+    zid = Column(Integer)  # 分类/分组ID
+
     # 体质关联（与现有系统对接）
-    suitable_constitutions = Column(JSON)  # 适用体质，如 ["qi_deficiency"]
-    avoid_constitutions = Column(JSON)  # 禁忌体质，如 ["phlegm_damp"]
+    suitable_constitutions = Column(JSONString, index=True)  # 适用体质，如 ["qi_deficiency"]
+    avoid_constitutions = Column(JSONString)  # 禁忌体质，如 ["phlegm_damp"]
     symptoms = Column(JSON)  # 主治症状，如 ["食欲不振", "疲劳乏力"]
     suitable_seasons = Column(JSON)  # 适用季节，如 ["春", "秋", "冬"]
 
+    # 食材和步骤
+    ingredients = Column(JSONString)  # {main: [...], auxiliary: [...], seasoning: [...]}
+    steps = Column(JSONString)  # 制作步骤列表
+
     # 功效说明
     efficacy = Column(Text)  # 功效，如 "健脾养胃、补肺益气"
+    efficacy_tags = Column(JSONString)  # 功效标签，如 ["健脾", "养胃"]
     health_benefits = Column(Text)  # 健康益处
     precautions = Column(Text)  # 注意事项
     tip = Column(Text)  # 小贴士
@@ -213,6 +244,11 @@ class Recipe(Base):
     confidence = Column(Float)  # AI填充置信度分数 (0-100)
 
     # Note: 食材和步骤现在通过关联表存储（RecipeIngredient, RecipeStep）
+
+    # PRD 新增字段
+    solar_terms = Column(JSONString)  # 节气标签，如 ["立冬", "小雪"]
+    confidence = Column(Float)  # AI 置信度分数
+    is_published = Column(Boolean, default=True)  # 是否发布
 
     # 营养分析 (每份)
     calories = Column(Float, default=0)  # 热量 (kcal/份)
@@ -258,7 +294,7 @@ class Recipe(Base):
     recipe_ingredients = relationship("RecipeIngredient", back_populates="recipe", cascade="all, delete-orphan")
     recipe_steps = relationship("RecipeStep", back_populates="recipe", cascade="all, delete-orphan", order_by="RecipeStep.step_number")
 
-    created_at = Column(DateTime, server_default=func.now())
+    created_at = Column(DateTime, server_default=func.now(), index=True)
     updated_at = Column(DateTime, onupdate=func.now())
     is_deleted = Column(Boolean, default=False)
 
@@ -294,6 +330,49 @@ class RecipeIngredient(Base):
 class RecipeStep(Base):
     """食谱制作步骤表"""
     __tablename__ = "recipe_steps"
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    recipe_id = Column(String(36), ForeignKey("recipes.id"), nullable=False, index=True)
+    step_number = Column(Integer, nullable=False)  # 步骤编号
+    description = Column(Text, nullable=False)  # 步骤描述
+    duration = Column(Integer)  # 该步骤预计时长（分钟）
+
+    # Relationships
+    recipe = relationship("Recipe", back_populates="recipe_steps")
+
+    created_at = Column(DateTime, server_default=func.now())
+
+
+class RecipeIngredient(Base):
+    """食谱食材关联表"""
+    __tablename__ = "recipe_ingredients"
+    __table_args__ = (
+        # Composite unique index for (recipe_id, ingredient_id)
+        # Note: ingredient_id can be NULL, so we use Index instead of UniqueConstraint
+        Index('uq_recipe_ingredient', 'recipe_id', 'ingredient_id', unique=True),
+    )
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    recipe_id = Column(String(36), ForeignKey("recipes.id"), nullable=False, index=True)
+    ingredient_id = Column(String(36), ForeignKey("ingredients.id"), nullable=True)  # 可选，如果食材不在库中
+    ingredient_name = Column(String(100), nullable=False)  # 食材名称（冗余字段，用于查询）
+    amount = Column(String(50))  # 用量，如 "50g", "2个", "适量"
+    is_main = Column(Boolean, default=False)  # 是否主料 (PRD: is_primary)
+    display_order = Column(Integer, default=0)  # 显示顺序
+
+    # Relationships
+    recipe = relationship("Recipe", back_populates="recipe_ingredients")
+    ingredient = relationship("Ingredient")
+
+    created_at = Column(DateTime, server_default=func.now())
+
+
+class RecipeStep(Base):
+    """食谱制作步骤表"""
+    __tablename__ = "recipe_steps"
+    __table_args__ = (
+        UniqueConstraint('recipe_id', 'step_number', name='uq_recipe_step'),
+    )
 
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     recipe_id = Column(String(36), ForeignKey("recipes.id"), nullable=False, index=True)

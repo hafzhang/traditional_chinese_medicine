@@ -6,15 +6,17 @@ Recipes API Router
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from typing import Dict, Any, Optional
+import logging
+import json
 
 from api.database import get_db
 from api.services.recipe_service import get_recipe_service
 from pydantic import BaseModel
 
 
-router = APIRouter(prefix="/recipes", tags=["recipes"])
+logger = logging.getLogger(__name__)
 
-recipe_service = get_recipe_service()
+router = APIRouter(prefix="/recipes", tags=["recipes"])
 
 
 # Response Models
@@ -30,157 +32,258 @@ class RecipeDetailResponse(BaseModel):
     data: Dict[str, Any]
 
 
-class RecipeRecommendationResponse(BaseModel):
+class RecipeSearchResponse(BaseModel):
     code: int
     message: str
     data: Dict[str, Any]
 
 
+class RecipeRecommendationResponse(BaseModel):
+    code: int
+    message: str
+    data: list
+
+
 @router.get("", response_model=RecipeListResponse)
 async def get_recipes(
-    skip: int = Query(0, ge=0, description="跳过数量"),
-    limit: int = Query(20, ge=1, le=100, description="限制数量"),
-    type: Optional[str] = Query(None, description="类型筛选"),
-    difficulty: Optional[str] = Query(None, description="难度筛选"),
+    page: int = Query(1, ge=1, description="页码（从1开始）"),
+    page_size: int = Query(20, ge=1, le=100, description="每页数量"),
     constitution: Optional[str] = Query(None, description="体质筛选"),
-    search: Optional[str] = Query(None, description="搜索关键词"),
+    efficacy: Optional[str] = Query(None, description="功效标签筛选"),
+    difficulty: Optional[str] = Query(None, description="难度筛选"),
+    solar_term: Optional[str] = Query(None, description="节气筛选"),
+    season: Optional[str] = Query(None, description="季节筛选"),
     db: Session = Depends(get_db)
 ) -> Dict[str, Any]:
     """
     获取食谱列表
 
-    支持按类型、难度、体质筛选和关键词搜索
+    支持按体质、功效、难度、节气、季节筛选
     """
-    recipes, total = recipe_service.get_recipes_list(
-        db=db,
-        skip=skip,
-        limit=limit,
-        type=type,
-        difficulty=difficulty,
-        constitution=constitution,
-        search=search
-    )
+    logger.info(f"API: get_recipes called with params: page={page}, page_size={page_size}, constitution={constitution}, efficacy={efficacy}, difficulty={difficulty}, solar_term={solar_term}, season={season}")
 
-    return {
-        "code": 0,
-        "message": "success",
-        "data": {
-            "total": total,
-            "items": [
-                {
-                    "id": r.id,
-                    "name": r.name,
-                    "type": r.type,
-                    "difficulty": r.difficulty,
-                    "cook_time": r.cook_time,
-                    "servings": r.servings,
-                    "image_url": r.image_url,
-                    "view_count": r.view_count
-                }
-                for r in recipes
-            ]
+    try:
+        recipe_service = get_recipe_service()
+        result = recipe_service.get_recipes(
+            db=db,
+            page=page,
+            page_size=page_size,
+            constitution=constitution,
+            efficacy=efficacy,
+            difficulty=difficulty,
+            solar_term=solar_term,
+            season=season
+        )
+
+        # 辅助函数：安全解析 JSON 字段
+        def parse_json_field(value):
+            if value is None or value == "":
+                return None
+            if isinstance(value, str):
+                try:
+                    return json.loads(value)
+                except (json.JSONDecodeError, TypeError):
+                    return value
+            return value
+
+        # 转换 Recipe 对象为字典
+        items = []
+        for r in result["items"]:
+            items.append({
+                "id": r.id,
+                "name": r.name,
+                "desc": getattr(r, 'desc', None),
+                "tip": getattr(r, 'tip', None),
+                "cooking_time": r.cooking_time,
+                "difficulty": r.difficulty,
+                "servings": r.servings,
+                "suitable_constitutions": parse_json_field(r.suitable_constitutions),
+                "avoid_constitutions": parse_json_field(r.avoid_constitutions),
+                "efficacy_tags": parse_json_field(r.efficacy_tags),
+                "solar_terms": parse_json_field(r.solar_terms),
+                "image_url": r.image_url,
+                "view_count": r.view_count
+            })
+
+        return {
+            "code": 0,
+            "message": "Success",
+            "data": {
+                "total": result["total"],
+                "page": result["page"],
+                "page_size": result["page_size"],
+                "items": items
+            }
         }
-    }
+    except ValueError as e:
+        logger.error(f"API: Validation error in get_recipes: {e}")
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"API: Error in get_recipes: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
-@router.get("/{recipe_id}", response_model=RecipeDetailResponse)
+@router.get("/search", response_model=RecipeSearchResponse)
+async def search_recipes(
+    keyword: str = Query(..., description="搜索关键词"),
+    page: int = Query(1, ge=1, description="页码（从1开始）"),
+    page_size: int = Query(20, ge=1, le=100, description="每页数量"),
+    constitution: Optional[str] = Query(None, description="体质筛选"),
+    difficulty: Optional[str] = Query(None, description="难度筛选"),
+    db: Session = Depends(get_db)
+) -> Dict[str, Any]:
+    """
+    搜索食谱
+
+    搜索范围: 名称、功效标签
+    """
+    logger.info(f"API: search_recipes called with keyword={keyword}, constitution={constitution}, difficulty={difficulty}")
+
+    try:
+        recipe_service = get_recipe_service()
+        result = recipe_service.search_recipes(
+            keyword=keyword,
+            db=db,
+            page=page,
+            page_size=page_size,
+            constitution=constitution,
+            difficulty=difficulty
+        )
+
+        # 辅助函数：安全解析 JSON 字段
+        def parse_json_field(value):
+            if value is None or value == "":
+                return None
+            if isinstance(value, str):
+                try:
+                    return json.loads(value)
+                except (json.JSONDecodeError, TypeError):
+                    return value
+            return value
+
+        # 转换 Recipe 对象为字典
+        items = []
+        for r in result["items"]:
+            items.append({
+                "id": r.id,
+                "name": r.name,
+                "desc": getattr(r, 'desc', None),
+                "cooking_time": r.cooking_time,
+                "difficulty": r.difficulty,
+                "efficacy_tags": parse_json_field(r.efficacy_tags),
+                "image_url": r.image_url
+            })
+
+        return {
+            "code": 0,
+            "message": "Success",
+            "data": {
+                "total": result["total"],
+                "page": result["page"],
+                "page_size": result["page_size"],
+                "items": items
+            }
+        }
+    except ValueError as e:
+        logger.error(f"API: Validation error in search_recipes: {e}")
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"API: Error in search_recipes: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+
+@router.get("/recommendations", response_model=RecipeRecommendationResponse)
+async def get_recommendations(
+    constitution: str = Query(..., description="体质代码"),
+    limit: int = Query(10, ge=1, le=50, description="限制数量"),
+    db: Session = Depends(get_db)
+) -> Dict[str, Any]:
+    """
+    根据体质获取推荐食谱
+
+    优先返回适合该体质，排除禁忌体质
+    """
+    logger.info(f"API: get_recommendations called with constitution={constitution}, limit={limit}")
+
+    try:
+        recipe_service = get_recipe_service()
+        recipes = recipe_service.get_recommendations_by_constitution(
+            constitution=constitution,
+            limit=limit,
+            db=db
+        )
+
+        # 辅助函数：安全解析 JSON 字段
+        def parse_json_field(value):
+            if value is None or value == "":
+                return None
+            if isinstance(value, str):
+                try:
+                    return json.loads(value)
+                except (json.JSONDecodeError, TypeError):
+                    return value
+            return value
+
+        # 转换 Recipe 对象为字典
+        items = []
+        for r in recipes:
+            items.append({
+                "id": r.id,
+                "name": r.name,
+                "desc": getattr(r, 'desc', None),
+                "cooking_time": r.cooking_time,
+                "difficulty": r.difficulty,
+                "efficacy_tags": parse_json_field(r.efficacy_tags),
+                "image_url": r.image_url
+            })
+
+        return {
+            "code": 0,
+            "message": "Success",
+            "data": items
+        }
+    except ValueError as e:
+        logger.error(f"API: Validation error in get_recommendations: {e}")
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"API: Error in get_recommendations: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+
+@router.get("/test")
+async def test_endpoint():
+    """测试端点"""
+    return {"code": 0, "message": "Router is working!", "data": None}
+
+
+@router.get("/detail/{recipe_id}", response_model=RecipeDetailResponse)
 async def get_recipe_detail(
     recipe_id: str,
     db: Session = Depends(get_db)
 ) -> Dict[str, Any]:
     """
-    获取食谱详情
+    获取食谱详情（包含食材和步骤）
+
+    Args:
+        recipe_id: 食谱UUID字符串
+        db: 数据库会话
     """
-    recipe = recipe_service.get_recipe_by_id(recipe_id, db)
+    logger.info(f"API: get_recipe_detail called with recipe_id={recipe_id}")
 
-    if not recipe:
-        raise HTTPException(status_code=404, detail="Recipe not found")
+    try:
+        recipe_service = get_recipe_service()
+        result = recipe_service.get_recipe_detail_with_ingredients_steps(recipe_id, db)
 
-    # 增加浏览次数
-    recipe_service.increment_view_count(recipe_id, db)
+        if not result:
+            raise HTTPException(status_code=404, detail="Recipe not found")
 
-    return {
-        "code": 0,
-        "message": "success",
-        "data": {
-            "id": recipe.id,
-            "name": recipe.name,
-            "type": recipe.type,
-            "difficulty": recipe.difficulty,
-            "cook_time": recipe.cook_time,
-            "servings": recipe.servings,
-            "suitable_constitutions": recipe.suitable_constitutions,
-            "symptoms": recipe.symptoms,
-            "suitable_seasons": recipe.suitable_seasons,
-            "ingredients": recipe.ingredients,
-            "steps": recipe.steps,
-            "efficacy": recipe.efficacy,
-            "health_benefits": recipe.health_benefits,
-            "precautions": recipe.precautions,
-            "tags": recipe.tags,
-            "image_url": recipe.image_url,
-            "description": recipe.description,
-            "view_count": recipe.view_count
+        return {
+            "code": 0,
+            "message": "Success",
+            "data": result
         }
-    }
-
-
-@router.get("/recommend/{constitution}", response_model=RecipeRecommendationResponse)
-async def get_recipe_recommendation(
-    constitution: str,
-    db: Session = Depends(get_db)
-) -> Dict[str, Any]:
-    """
-    根据体质获取三餐推荐食谱
-
-    返回早餐、午餐、晚餐的推荐食谱
-    """
-    if not recipe_service.is_valid_constitution_code(constitution):
-        raise HTTPException(status_code=400, detail=f"Invalid constitution code: {constitution}")
-
-    result = recipe_service.get_recommendations_by_constitution(constitution, db)
-
-    return {
-        "code": 0,
-        "message": "success",
-        "data": result
-    }
-
-
-@router.get("/types/list")
-async def get_recipe_types() -> Dict[str, Any]:
-    """
-    获取食谱类型列表
-    """
-    types = [
-        {"value": "粥类", "label": "粥类"},
-        {"value": "汤类", "label": "汤类"},
-        {"value": "茶饮", "label": "茶饮"},
-        {"value": "菜肴", "label": "菜肴"},
-        {"value": "小吃", "label": "小吃"},
-        {"value": "主食", "label": "主食"}
-    ]
-
-    return {
-        "code": 0,
-        "message": "success",
-        "data": types
-    }
-
-
-@router.get("/difficulties/list")
-async def get_recipe_difficulties() -> Dict[str, Any]:
-    """
-    获取食谱难度列表
-    """
-    difficulties = [
-        {"value": "简单", "label": "简单"},
-        {"value": "中等", "label": "中等"},
-        {"value": "困难", "label": "困难"}
-    ]
-
-    return {
-        "code": 0,
-        "message": "success",
-        "data": difficulties
-    }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"API: Error in get_recipe_detail: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")

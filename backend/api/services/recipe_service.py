@@ -3,14 +3,34 @@ Recipe Service
 食谱服务层 - Phase 1
 """
 
+import logging
+import json
 from typing import List, Dict, Any, Optional
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy import or_
 
-from api.models import Recipe
+from api.models import Recipe, RecipeIngredient, RecipeStep
+from sqlalchemy.orm import joinedload
+
+# 配置日志
+logger = logging.getLogger(__name__)
+
+
+def parse_json_field(value):
+    """安全解析 JSON 字段"""
+    if value is None or value == "":
+        return None
+    if isinstance(value, str):
+        try:
+            return json.loads(value)
+        except (json.JSONDecodeError, TypeError):
+            return value
+    return value
 
 
 class RecipeService:
-    """食谱服务类"""
+    """食谱服务类 - 无状态服务"""
 
     # 有效的体质代码
     VALID_CONSTITUTIONS = {
@@ -18,11 +38,16 @@ class RecipeService:
         "phlegm_damp", "damp_heat", "blood_stasis", "qi_depression", "special"
     }
 
-    # 食谱类型
-    RECIPE_TYPES = ["粥类", "汤类", "茶饮", "菜肴", "小吃", "主食"]
-
     # 难度级别
-    DIFFICULTY_LEVELS = ["简单", "中等", "困难"]
+    DIFFICULTY_LEVELS = ["easy", "medium", "harder", "hard"]
+
+    # 四季到节气映射 (使用中文名)
+    SEASON_TO_SOLAR_TERMS = {
+        'spring': ['立春', '雨水', '惊蛰', '春分', '清明', '谷雨'],
+        'summer': ['立夏', '小满', '芒种', '夏至', '小暑', '大暑', '长夏'],
+        'autumn': ['立秋', '处暑', '白露', '秋分', '寒露', '霜降'],
+        'winter': ['立冬', '小雪', '大雪', '冬至', '小寒', '大寒'],
+    }
 
     def get_recipe_by_id(self, recipe_id: str, db: Session) -> Optional[Recipe]:
         """
@@ -35,61 +60,166 @@ class RecipeService:
         Returns:
             食谱对象或None
         """
-        return db.query(Recipe).filter(
-            Recipe.id == recipe_id,
-            Recipe.is_deleted == False
-        ).first()
+        logger.info(f"Fetching recipe with id: {recipe_id}")
+        try:
+            # ingredients 和 steps 是 JSON 列，会自动加载，不需要 joinedload
+            result = db.query(Recipe).filter(Recipe.id == recipe_id).first()
+            logger.debug(f"Found recipe: {result.name if result else 'None'}")
+            return result
+        except SQLAlchemyError as e:
+            logger.error(f"Database error fetching recipe {recipe_id}: {e}")
+            raise
 
-    def get_recipes_list(
+    def get_recipe_detail_with_ingredients_steps(self, recipe_id: str, db: Session) -> Optional[Dict[str, Any]]:
+        """
+        根据ID获取食谱详情（包含食材和步骤）
+
+        Args:
+            recipe_id: 食谱ID
+            db: 数据库会话
+
+        Returns:
+            包含食谱详情、食材和步骤的字典，如果找不到返回None
+        """
+        logger.info(f"Fetching recipe detail with ingredients and steps for id: {recipe_id}")
+        try:
+            # 获取食谱基本信息
+            recipe = db.query(Recipe).filter(Recipe.id == recipe_id).first()
+
+            if not recipe:
+                logger.warning(f"Recipe not found: {recipe_id}")
+                return None
+
+            # 获取食材
+            ingredients = db.query(RecipeIngredient).filter(
+                RecipeIngredient.recipe_id == recipe_id
+            ).order_by(RecipeIngredient.display_order).all()
+
+            # 获取步骤
+            steps = db.query(RecipeStep).filter(
+                RecipeStep.recipe_id == recipe_id
+            ).order_by(RecipeStep.step_number).all()
+
+            # 格式化食材
+            ingredients_list = []
+            for ing in ingredients:
+                ingredients_list.append({
+                    "name": ing.ingredient_name,
+                    "amount": ing.amount,
+                    "is_main": ing.is_main,
+                    "display_order": ing.display_order
+                })
+
+            # 格式化步骤
+            steps_list = []
+            for step in steps:
+                steps_list.append({
+                    "step_number": step.step_number,
+                    "description": step.description,
+                    "duration": step.duration
+                })
+
+            return {
+                "id": recipe.id,
+                "name": recipe.name,
+                "desc": getattr(recipe, 'desc', None),
+                "tip": getattr(recipe, 'tip', None),
+                "cooking_time": recipe.cooking_time,
+                "difficulty": recipe.difficulty,
+                "servings": recipe.servings,
+                "suitable_constitutions": parse_json_field(recipe.suitable_constitutions),
+                "avoid_constitutions": parse_json_field(recipe.avoid_constitutions),
+                "efficacy_tags": parse_json_field(recipe.efficacy_tags),
+                "solar_terms": parse_json_field(recipe.solar_terms),
+                "image_url": recipe.image_url,
+                "ingredients": ingredients_list,
+                "steps": steps_list,
+                "view_count": recipe.view_count
+            }
+        except SQLAlchemyError as e:
+            logger.error(f"Database error fetching recipe detail {recipe_id}: {e}")
+            raise
+
+    def get_recipes(
         self,
         db: Session,
-        skip: int = 0,
-        limit: int = 20,
-        type: Optional[str] = None,
-        difficulty: Optional[str] = None,
+        page: int = 1,
+        page_size: int = 20,
         constitution: Optional[str] = None,
-        search: Optional[str] = None
-    ) -> tuple[List[Recipe], int]:
+        efficacy: Optional[str] = None,
+        difficulty: Optional[str] = None,
+        solar_term: Optional[str] = None,
+        season: Optional[str] = None
+    ) -> Dict[str, Any]:
         """
-        获取食谱列表
+        获取食谱列表（支持多种筛选条件）
 
         Args:
             db: 数据库会话
-            skip: 跳过数量
-            limit: 限制数量
-            type: 类型筛选
-            difficulty: 难度筛选
+            page: 页码（从1开始）
+            page_size: 每页数量
             constitution: 体质筛选
-            search: 搜索关键词
+            efficacy: 功效标签筛选
+            difficulty: 难度筛选
+            solar_term: 节气筛选
+            season: 季节筛选
 
         Returns:
-            (食谱列表, 总数)
+            {total, page, page_size, items}
         """
-        query = db.query(Recipe).filter(Recipe.is_deleted == False)
+        logger.info(f"Fetching recipes with params: page={page}, page_size={page_size}, constitution={constitution}, efficacy={efficacy}, difficulty={difficulty}, solar_term={solar_term}, season={season}")
+        try:
+            # 验证体质代码
+            if constitution and not self.is_valid_constitution_code(constitution):
+                raise ValueError(f"Invalid constitution code: {constitution}")
 
-        # 筛选条件
-        if type:
-            query = query.filter(Recipe.type == type)
-        if difficulty:
-            query = query.filter(Recipe.difficulty == difficulty)
-        if constitution:
-            query = query.filter(Recipe.suitable_constitutions.contains(constitution))
-        if search:
-            query = query.filter(Recipe.name.like(f"%{search}%"))
+            # 构建查询 - 只显示有封面图片的食谱
+            query = db.query(Recipe).filter(Recipe.image_url.isnot(None))
 
-        # 总数
-        total = query.count()
+            # 应用筛选条件
+            if constitution:
+                query = query.filter(Recipe.suitable_constitutions.contains(constitution))
 
-        # 分页
-        recipes = query.order_by(Recipe.view_count.desc()).offset(skip).limit(limit).all()
+            if efficacy:
+                query = query.filter(Recipe.efficacy_tags.contains(efficacy))
 
-        return recipes, total
+            if difficulty:
+                if difficulty not in self.DIFFICULTY_LEVELS:
+                    raise ValueError(f"Invalid difficulty level: {difficulty}")
+                query = query.filter(Recipe.difficulty == difficulty)
+
+            if solar_term:
+                query = query.filter(Recipe.solar_terms.contains(solar_term))
+
+            if season:
+                solar_terms = self.SEASON_TO_SOLAR_TERMS.get(season, [])
+                if solar_terms:
+                    # 匹配季节中的任一节气 (SQLite JSON 不支持 overlap，使用 any)
+                    conditions = [Recipe.solar_terms.contains(st) for st in solar_terms]
+                    query = query.filter(or_(*conditions))
+
+            # 计算总数
+            total = query.count()
+
+            # 分页
+            offset = (page - 1) * page_size
+            items = query.offset(offset).limit(page_size).all()
+
+            logger.debug(f"Found {len(items)} recipes (total: {total})")
+            return {
+                "total": total,
+                "page": page,
+                "page_size": page_size,
+                "items": items
+            }
+        except SQLAlchemyError as e:
+            logger.error(f"Database error fetching recipes: {e}")
+            raise
 
     def get_recipes_by_constitution(
         self,
         constitution: str,
         db: Session,
-        meal_type: Optional[str] = None,
         limit: int = 10
     ) -> List[Recipe]:
         """
@@ -98,136 +228,115 @@ class RecipeService:
         Args:
             constitution: 体质代码
             db: 数据库会话
-            meal_type: 餐型 (breakfast, lunch, dinner)
             limit: 限制数量
 
         Returns:
             推荐食谱列表
         """
+        logger.info(f"Fetching recipes for constitution: {constitution} (limit: {limit})")
         if not self.is_valid_constitution_code(constitution):
-            return []
+            raise ValueError(f"Invalid constitution code: {constitution}")
 
-        query = db.query(Recipe).filter(
-            Recipe.is_deleted == False,
+        recipes = db.query(Recipe).filter(
             Recipe.suitable_constitutions.contains(constitution)
-        )
-
-        # 可以根据餐型进一步筛选
-        # 这里简单返回所有适合的食谱
-        recipes = query.order_by(Recipe.view_count.desc()).limit(limit).all()
-
+        ).order_by(Recipe.view_count.desc()).limit(limit).all()
+        logger.debug(f"Found {len(recipes)} recipes for constitution: {constitution}")
         return recipes
 
     def get_recommendations_by_constitution(
         self,
         constitution: str,
+        limit: int,
         db: Session
-    ) -> Dict[str, Any]:
+    ) -> List[Recipe]:
         """
-        根据体质获取三餐推荐食谱
+        根据体质获取推荐食谱
 
         Args:
             constitution: 体质代码
-            db: 数据库会话
-
-        Returns:
-            三餐推荐字典
-        """
-        constitution_name = self.get_constitution_name(constitution)
-
-        # 获取所有适合的食谱
-        all_recipes = self.get_recipes_by_constitution(constitution, db, limit=30)
-
-        # 按类型分类
-        breakfast = [r for r in all_recipes if r.type in ["粥类", "主食"]][:3]
-        lunch = [r for r in all_recipes if r.type in ["菜肴", "汤类"]][:3]
-        dinner = [r for r in all_recipes if r.type in ["粥类", "汤类", "菜肴"]][:3]
-
-        return {
-            "constitution": constitution,
-            "constitution_name": constitution_name,
-            "recipes": {
-                "breakfast": [
-                    {
-                        "id": r.id,
-                        "name": r.name,
-                        "type": r.type,
-                        "difficulty": r.difficulty,
-                        "cook_time": r.cook_time,
-                        "image_url": r.image_url,
-                        "reason": f"健脾养胃，适合早餐"
-                    }
-                    for r in breakfast
-                ],
-                "lunch": [
-                    {
-                        "id": r.id,
-                        "name": r.name,
-                        "type": r.type,
-                        "difficulty": r.difficulty,
-                        "cook_time": r.cook_time,
-                        "image_url": r.image_url,
-                        "reason": "补充营养，提供能量"
-                    }
-                    for r in lunch
-                ],
-                "dinner": [
-                    {
-                        "id": r.id,
-                        "name": r.name,
-                        "type": r.type,
-                        "difficulty": r.difficulty,
-                        "cook_time": r.cook_time,
-                        "image_url": r.image_url,
-                        "reason": "清淡易消化，养心安神"
-                    }
-                    for r in dinner
-                ]
-            }
-        }
-
-    def get_recipes_by_symptom(
-        self,
-        symptom: str,
-        db: Session,
-        limit: int = 20
-    ) -> List[Recipe]:
-        """
-        根据症状搜索食谱
-
-        Args:
-            symptom: 症状关键词
-            db: 数据库会话
             limit: 限制数量
+            db: 数据库会话
 
         Returns:
-            相关食谱列表
+            推荐食谱列表，优先返回适合该体质，排除禁忌体质
         """
-        # 通过症状和功效字段搜索
-        recipes = db.query(Recipe).filter(
-            Recipe.is_deleted == False,
-            Recipe.symptoms.contains(symptom)
-        ).order_by(Recipe.view_count.desc()).limit(limit).all()
+        logger.info(f"Fetching recommendations for constitution: {constitution} (limit: {limit})")
+        if not self.is_valid_constitution_code(constitution):
+            raise ValueError(f"Invalid constitution code: {constitution}")
 
+        # 查询适合该体质且有封面图片的食谱，排除禁忌该体质的
+        recipes = db.query(Recipe).filter(
+            Recipe.image_url.isnot(None),
+            Recipe.suitable_constitutions.contains(constitution),
+            ~Recipe.avoid_constitutions.contains(constitution)
+        ).order_by(Recipe.view_count.desc()).limit(limit).all()
+        logger.debug(f"Found {len(recipes)} recommendations for constitution: {constitution}")
         return recipes
 
-    def increment_view_count(self, recipe_id: str, db: Session) -> bool:
+    def search_recipes(
+        self,
+        keyword: str,
+        db: Session,
+        page: int = 1,
+        page_size: int = 20,
+        constitution: Optional[str] = None,
+        difficulty: Optional[str] = None
+    ) -> Dict[str, Any]:
         """
-        增加浏览次数
+        搜索食谱
+
+        搜索范围: name, efficacy_tags
 
         Args:
-            recipe_id: 食谱ID
+            keyword: 搜索关键词
             db: 数据库会话
+            page: 页码（从1开始）
+            page_size: 每页数量
+            constitution: 体质筛选
+            difficulty: 难度筛选
 
         Returns:
-            是否成功
+            {total, page, page_size, items}
         """
-        recipe = self.get_recipe_by_id(recipe_id, db)
-        if recipe:
-            recipe.view_count = (recipe.view_count or 0) + 1
-            db.commit()
-            return True
-        return False
+        logger.info(f"Searching recipes with keyword: {keyword}, filters: constitution={constitution}, difficulty={difficulty}, page={page}, page_size={page_size}")
+        # 验证体质代码
+        if constitution and not self.is_valid_constitution_code(constitution):
+            raise ValueError(f"Invalid constitution code: {constitution}")
+
+        # 验证难度级别
+        if difficulty and difficulty not in self.DIFFICULTY_LEVELS:
+            raise ValueError(f"Invalid difficulty level: {difficulty}")
+
+        # 构建查询 - 搜索名称和功效标签，只显示有封面图片的食谱
+        query = db.query(Recipe).filter(
+            Recipe.image_url.isnot(None),
+            or_(
+                Recipe.name.contains(keyword),
+                Recipe.efficacy_tags.contains(keyword)
+            )
+        )
+
+        # 应用筛选条件
+        if constitution:
+            query = query.filter(Recipe.suitable_constitutions.contains(constitution))
+
+        if difficulty:
+            query = query.filter(Recipe.difficulty == difficulty)
+
+        # 计算总数
+        total = query.count()
+
+        # 分页
+        offset = (page - 1) * page_size
+        items = query.offset(offset).limit(page_size).all()
+
+        logger.debug(f"Found {len(items)} recipes matching '{keyword}' (total: {total})")
+        return {
+            "total": total,
+            "page": page,
+            "page_size": page_size,
+            "items": items
+        }
 
     def is_valid_constitution_code(self, code: str) -> bool:
         """
@@ -265,13 +374,11 @@ class RecipeService:
         return names.get(code, code)
 
 
-# 单例模式
-_recipe_service_instance = None
-
-
 def get_recipe_service() -> RecipeService:
-    """获取食谱服务实例"""
-    global _recipe_service_instance
-    if _recipe_service_instance is None:
-        _recipe_service_instance = RecipeService()
-    return _recipe_service_instance
+    """
+    获取食谱服务实例
+
+    Returns:
+        RecipeService 实例
+    """
+    return RecipeService()

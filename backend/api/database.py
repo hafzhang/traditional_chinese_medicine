@@ -66,9 +66,11 @@ def get_db_optional() -> Generator[Session | None, None, None]:
 
 def init_db():
     """Initialize database tables"""
+    # Import all models so they're registered with Base.metadata
     from api.models import (
-        user, constitution_result, question, food, recipe,
-        ingredient, acupoint, symptom_acupoint, tongue_diagnosis_record, course
+        User, ConstitutionResult, Question, Food, Recipe,
+        Ingredient, Acupoint, SymptomAcupoint, TongueDiagnosisRecord, Course,
+        RecipeIngredient, RecipeStep, ConstitutionInfo
     )
     Base.metadata.create_all(bind=engine)
-    print("✅ Database tables initialized")
+    print("[OK] Database tables initialized")

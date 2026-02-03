@@ -53,6 +53,18 @@ if not os.path.exists(static_dir):
     os.makedirs(static_dir)
 app.mount("/static", StaticFiles(directory=static_dir), name="static")
 
+# Mount images directory - use absolute path with forward slashes
+import pathlib
+backend_dir = pathlib.Path(__file__).parent.resolve()
+images_dir = (backend_dir / "../source_data/dishes_images").resolve()
+# Convert to string with forward slashes
+images_dir_str = str(images_dir).replace('\\', '/')
+if images_dir.exists():
+    app.mount("/images", StaticFiles(directory=images_dir_str), name="images")
+    print(f"[INFO] Mounted images directory: {images_dir_str}")
+else:
+    print(f"[WARNING] Images directory not found: {images_dir_str}")
+
 # Configure CORS
 app.add_middleware(
     CORSMiddleware,

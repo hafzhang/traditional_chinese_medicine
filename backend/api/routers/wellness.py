@@ -123,7 +123,7 @@ async def get_seasonal_recipes(
                     "name": recipe.name,
                     "type": recipe.type,
                     "difficulty": recipe.difficulty,
-                    "cook_time": recipe.cook_time,
+                    "cooking_time": recipe.cooking_time or recipe.cook_time,  # PRD 字段，fallback 到旧字段
                     "servings": recipe.servings,
                     "efficacy": recipe.efficacy,
                     "calories": recipe.calories,
