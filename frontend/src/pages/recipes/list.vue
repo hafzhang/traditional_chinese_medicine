@@ -8,91 +8,80 @@
       </view>
     </view>
 
-    <!-- 筛选器区域 -->
-    <view class="filter-section">
-      <scroll-view scroll-x class="filter-scroll">
-        <view class="filter-label">体质:</view>
-        <view class="filter-item" :class="{ active: !selectedConstitution }" @click="selectConstitution('')">
-          全部
-        </view>
-        <view
-          v-for="item in constitutions"
-          :key="item.value"
-          class="filter-item"
-          :class="{ active: selectedConstitution === item.value }"
-          @click="selectConstitution(item.value)"
-        >
-          {{ item.label }}
-        </view>
-      </scroll-view>
+    <!-- 整体滚动区域：包含筛选器和列表 -->
+    <scroll-view class="main-scroll" scroll-y @scrolltolower="loadMore" refresher-enabled @refresherrefresh="onRefresh" :refresher-triggered="refreshing">
+      <!-- 筛选器区域 -->
+      <view class="filter-section">
+        <scroll-view scroll-x class="filter-scroll">
+          <view class="filter-label">体质:</view>
+          <view class="filter-item" :class="{ active: !selectedConstitution }" @click="selectConstitution('')">
+            全部
+          </view>
+          <view
+            v-for="item in constitutions"
+            :key="item.value"
+            class="filter-item"
+            :class="{ active: selectedConstitution === item.value }"
+            @click="selectConstitution(item.value)"
+          >
+            {{ item.label }}
+          </view>
+        </scroll-view>
 
-      <scroll-view scroll-x class="filter-scroll">
-        <view class="filter-label">功效:</view>
-        <view class="filter-item" :class="{ active: !selectedEfficacy }" @click="selectEfficacy('')">
-          全部
-        </view>
-        <view
-          v-for="item in commonEfficacyTags"
-          :key="item"
-          class="filter-item"
-          :class="{ active: selectedEfficacy === item }"
-          @click="selectEfficacy(item)"
-        >
-          {{ item }}
-        </view>
-      </scroll-view>
+        <scroll-view scroll-x class="filter-scroll">
+          <view class="filter-label">功效:</view>
+          <view class="filter-item" :class="{ active: !selectedEfficacy }" @click="selectEfficacy('')">
+            全部
+          </view>
+          <view
+            v-for="item in commonEfficacyTags"
+            :key="item"
+            class="filter-item"
+            :class="{ active: selectedEfficacy === item }"
+            @click="selectEfficacy(item)"
+          >
+            {{ item }}
+          </view>
+        </scroll-view>
 
-      <scroll-view scroll-x class="filter-scroll">
-        <view class="filter-label">节气:</view>
-        <view class="filter-item" :class="{ active: !selectedSolarTerm }" @click="selectSolarTerm('')">
-          全部
-        </view>
-        <view
-          v-for="item in solarTerms"
-          :key="item.value"
-          class="filter-item"
-          :class="{ active: selectedSolarTerm === item.value }"
-          @click="selectSolarTerm(item.value)"
-        >
-          {{ item.label }}
-        </view>
-      </scroll-view>
+        <scroll-view scroll-x class="filter-scroll">
+          <view class="filter-label">季节:</view>
+          <view class="filter-item" :class="{ active: !selectedSeason }" @click="selectSeason('')">
+            全部
+          </view>
+          <view
+            v-for="item in seasons"
+            :key="item.value"
+            class="filter-item"
+            :class="{ active: selectedSeason === item.value }"
+            @click="selectSeason(item.value)"
+          >
+            {{ item.label }}
+          </view>
+        </scroll-view>
 
-      <scroll-view scroll-x class="filter-scroll">
-        <view class="filter-label">季节:</view>
-        <view class="filter-item" :class="{ active: !selectedSeason }" @click="selectSeason('')">
-          全部
-        </view>
-        <view
-          v-for="item in seasons"
-          :key="item.value"
-          class="filter-item"
-          :class="{ active: selectedSeason === item.value }"
-          @click="selectSeason(item.value)"
-        >
-          {{ item.label }}
-        </view>
-      </scroll-view>
+        <scroll-view scroll-x class="filter-scroll">
+          <view class="filter-label">难度:</view>
+          <view class="filter-item" :class="{ active: !selectedDifficulty }" @click="selectDifficulty('')">
+            全部
+          </view>
+          <view
+            v-for="item in difficulties"
+            :key="item.value"
+            class="filter-item"
+            :class="{ active: selectedDifficulty === item.value }"
+            @click="selectDifficulty(item.value)"
+          >
+            {{ item.label }}
+          </view>
+        </scroll-view>
+      </view>
 
-      <scroll-view scroll-x class="filter-scroll">
-        <view class="filter-label">难度:</view>
-        <view class="filter-item" :class="{ active: !selectedDifficulty }" @click="selectDifficulty('')">
-          全部
-        </view>
-        <view
-          v-for="item in difficulties"
-          :key="item.value"
-          class="filter-item"
-          :class="{ active: selectedDifficulty === item.value }"
-          @click="selectDifficulty(item.value)"
-        >
-          {{ item.label }}
-        </view>
-      </scroll-view>
-    </view>
+      <!-- 总数提示 -->
+      <view v-if="total > 0" class="total-hint">
+        <text>共 {{ total }} 道美食，已加载 {{ recipes.length }} 道</text>
+      </view>
 
-    <!-- 食谱列表 -->
-    <scroll-view class="recipes-scroll" scroll-y @scrolltolower="loadMore" refresher-enabled @refresherrefresh="onRefresh" :refresher-triggered="refreshing">
       <view class="recipes-list">
         <!-- 加载状态 -->
         <view v-if="loading && recipes.length === 0" class="loading-state">
@@ -112,7 +101,7 @@
           class="recipe-card"
           @click="goToDetail(item.id)"
         >
-          <image v-if="item.cover_image" :src="item.cover_image" class="recipe-cover" mode="aspectFill" />
+          <image v-if="item.image_url" :src="item.image_url" class="recipe-cover" mode="aspectFill" />
           <view v-else class="recipe-cover placeholder">
             <text class="placeholder-icon">🍲</text>
           </view>
@@ -141,7 +130,8 @@
       <!-- 加载更多 -->
       <view class="load-more">
         <text v-if="loading && recipes.length > 0">加载中...</text>
-        <text v-else-if="!hasMore">没有更多了</text>
+        <text v-else-if="!hasMore">已加载全部 {{ total }} 道美食</text>
+        <text v-else>下拉加载更多 ({{ recipes.length }}/{{ total }})</text>
       </view>
     </scroll-view>
   </view>
@@ -150,14 +140,13 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
-import { getRecipesList, CONSTITUTIONS, SEASONS, DIFFICULTIES, SOLAR_TERMS, getConstitutionName, getDifficultyName } from '@/api/recipes.js'
+import { getRecipesList, CONSTITUTIONS, SEASONS, DIFFICULTIES, getConstitutionName, getDifficultyName } from '@/api/recipes.js'
 
 // 数据
 const recipes = ref([])
 const constitutions = ref(CONSTITUTIONS)
 const seasons = ref(SEASONS)
 const difficulties = ref(DIFFICULTIES)
-const solarTerms = ref(SOLAR_TERMS)
 // 常用功效标签（从后端数据中选取的常见标签）
 const commonEfficacyTags = ref([
   '补气', '补血', '滋阴', '助阳', '健脾', '养胃',
@@ -168,12 +157,11 @@ const selectedConstitution = ref('')
 const selectedSeason = ref('')
 const selectedDifficulty = ref('')
 const selectedEfficacy = ref('')
-const selectedSolarTerm = ref('')
 const loading = ref(false)
 const refreshing = ref(false)
 const hasMore = ref(true)
 const currentPage = ref(1)
-const pageSize = 20
+const pageSize = 100  // 每页显示100条
 const total = ref(0)
 
 // 生命周期
@@ -219,9 +207,6 @@ async function loadData(reset = true) {
     }
     if (selectedEfficacy.value) {
       params.efficacy = selectedEfficacy.value
-    }
-    if (selectedSolarTerm.value) {
-      params.solar_term = selectedSolarTerm.value
     }
 
     const res = await getRecipesList(params)
@@ -269,12 +254,6 @@ function selectDifficulty(value) {
 // 选择功效
 function selectEfficacy(value) {
   selectedEfficacy.value = value
-  loadData(true)
-}
-
-// 选择节气
-function selectSolarTerm(value) {
-  selectedSolarTerm.value = value
   loadData(true)
 }
 
@@ -371,8 +350,19 @@ function goBack() {
   }
 }
 
-.recipes-scroll {
+.main-scroll {
   flex: 1;
+  height: 0; /* 确保flex子元素正确计算高度 */
+  overflow-y: auto;
+}
+
+.total-hint {
+  padding: 20rpx 30rpx;
+  text-align: center;
+  font-size: 26rpx;
+  color: #999;
+  background: #fff;
+  border-bottom: 1px solid #eee;
 }
 
 .recipes-list {

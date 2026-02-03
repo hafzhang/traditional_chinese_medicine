@@ -15,8 +15,8 @@
       <!-- 图片区域 -->
       <view class="image-section">
         <image
-          v-if="recipe.cover_image"
-          :src="recipe.cover_image"
+          v-if="recipe.image_url"
+          :src="recipe.image_url"
           class="recipe-image"
           mode="aspectFill"
         />
@@ -41,12 +41,6 @@
       <view v-if="recipe.desc" class="info-card desc-section">
         <view class="card-title">简介</view>
         <view class="card-content">{{ recipe.desc }}</view>
-      </view>
-
-      <!-- 贴士区域 (黄色背景) -->
-      <view v-if="recipe.tip" class="info-card tip-section">
-        <view class="card-title">💡 小贴士</view>
-        <view class="card-content">{{ recipe.tip }}</view>
       </view>
 
       <!-- 体质信息 (适合 + 禁忌) -->
@@ -134,6 +128,12 @@
             </view>
           </view>
         </view>
+      </view>
+
+      <!-- 小贴士 (黄色背景) -->
+      <view v-if="recipe.tip" class="info-card tip-section">
+        <view class="card-title">💡 小贴士</view>
+        <view class="card-content">{{ recipe.tip }}</view>
       </view>
 
       <!-- 浏览次数 -->

@@ -35,7 +35,7 @@ export function getRecipesList(params = {}) {
  * @returns {Promise}
  */
 export function getRecipeDetail(recipeId) {
-  return get(`/api/v1/recipes/${recipeId}`)
+  return get(`/api/v1/recipes/detail/${recipeId}`)
 }
 
 /**

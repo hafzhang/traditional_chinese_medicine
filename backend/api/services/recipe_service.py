@@ -4,6 +4,7 @@ Recipe Service
 """
 
 import logging
+import json
 from typing import List, Dict, Any, Optional
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import SQLAlchemyError
@@ -14,6 +15,18 @@ from sqlalchemy.orm import joinedload
 
 # 配置日志
 logger = logging.getLogger(__name__)
+
+
+def parse_json_field(value):
+    """安全解析 JSON 字段"""
+    if value is None or value == "":
+        return None
+    if isinstance(value, str):
+        try:
+            return json.loads(value)
+        except (json.JSONDecodeError, TypeError):
+            return value
+    return value
 
 
 class RecipeService:
@@ -114,11 +127,11 @@ class RecipeService:
                 "cooking_time": recipe.cooking_time,
                 "difficulty": recipe.difficulty,
                 "servings": recipe.servings,
-                "suitable_constitutions": recipe.suitable_constitutions,
-                "avoid_constitutions": recipe.avoid_constitutions,
-                "efficacy_tags": recipe.efficacy_tags,
-                "solar_terms": recipe.solar_terms,
-                "cover_image": recipe.cover_image,
+                "suitable_constitutions": parse_json_field(recipe.suitable_constitutions),
+                "avoid_constitutions": parse_json_field(recipe.avoid_constitutions),
+                "efficacy_tags": parse_json_field(recipe.efficacy_tags),
+                "solar_terms": parse_json_field(recipe.solar_terms),
+                "image_url": recipe.image_url,
                 "ingredients": ingredients_list,
                 "steps": steps_list,
                 "view_count": recipe.view_count
@@ -160,8 +173,8 @@ class RecipeService:
             if constitution and not self.is_valid_constitution_code(constitution):
                 raise ValueError(f"Invalid constitution code: {constitution}")
 
-            # 构建查询
-            query = db.query(Recipe)
+            # 构建查询 - 只显示有封面图片的食谱
+            query = db.query(Recipe).filter(Recipe.image_url.isnot(None))
 
             # 应用筛选条件
             if constitution:
@@ -251,8 +264,9 @@ class RecipeService:
         if not self.is_valid_constitution_code(constitution):
             raise ValueError(f"Invalid constitution code: {constitution}")
 
-        # 查询适合该体质的食谱，排除禁忌该体质的
+        # 查询适合该体质且有封面图片的食谱，排除禁忌该体质的
         recipes = db.query(Recipe).filter(
+            Recipe.image_url.isnot(None),
             Recipe.suitable_constitutions.contains(constitution),
             ~Recipe.avoid_constitutions.contains(constitution)
         ).order_by(Recipe.view_count.desc()).limit(limit).all()
@@ -293,8 +307,9 @@ class RecipeService:
         if difficulty and difficulty not in self.DIFFICULTY_LEVELS:
             raise ValueError(f"Invalid difficulty level: {difficulty}")
 
-        # 构建查询 - 搜索名称和功效标签
+        # 构建查询 - 搜索名称和功效标签，只显示有封面图片的食谱
         query = db.query(Recipe).filter(
+            Recipe.image_url.isnot(None),
             or_(
                 Recipe.name.contains(keyword),
                 Recipe.efficacy_tags.contains(keyword)

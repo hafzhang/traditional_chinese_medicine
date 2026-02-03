@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from typing import Dict, Any, Optional
 import logging
+import json
 
 from api.database import get_db
 from api.services.recipe_service import get_recipe_service
@@ -74,6 +75,17 @@ async def get_recipes(
             season=season
         )
 
+        # 辅助函数：安全解析 JSON 字段
+        def parse_json_field(value):
+            if value is None or value == "":
+                return None
+            if isinstance(value, str):
+                try:
+                    return json.loads(value)
+                except (json.JSONDecodeError, TypeError):
+                    return value
+            return value
+
         # 转换 Recipe 对象为字典
         items = []
         for r in result["items"]:
@@ -85,11 +97,11 @@ async def get_recipes(
                 "cooking_time": r.cooking_time,
                 "difficulty": r.difficulty,
                 "servings": r.servings,
-                "suitable_constitutions": r.suitable_constitutions,
-                "avoid_constitutions": r.avoid_constitutions,
-                "efficacy_tags": r.efficacy_tags,
-                "solar_terms": r.solar_terms,
-                "cover_image": r.cover_image,
+                "suitable_constitutions": parse_json_field(r.suitable_constitutions),
+                "avoid_constitutions": parse_json_field(r.avoid_constitutions),
+                "efficacy_tags": parse_json_field(r.efficacy_tags),
+                "solar_terms": parse_json_field(r.solar_terms),
+                "image_url": r.image_url,
                 "view_count": r.view_count
             })
 
@@ -138,6 +150,17 @@ async def search_recipes(
             difficulty=difficulty
         )
 
+        # 辅助函数：安全解析 JSON 字段
+        def parse_json_field(value):
+            if value is None or value == "":
+                return None
+            if isinstance(value, str):
+                try:
+                    return json.loads(value)
+                except (json.JSONDecodeError, TypeError):
+                    return value
+            return value
+
         # 转换 Recipe 对象为字典
         items = []
         for r in result["items"]:
@@ -147,8 +170,8 @@ async def search_recipes(
                 "desc": getattr(r, 'desc', None),
                 "cooking_time": r.cooking_time,
                 "difficulty": r.difficulty,
-                "efficacy_tags": r.efficacy_tags,
-                "cover_image": r.cover_image
+                "efficacy_tags": parse_json_field(r.efficacy_tags),
+                "image_url": r.image_url
             })
 
         return {
@@ -190,6 +213,17 @@ async def get_recommendations(
             db=db
         )
 
+        # 辅助函数：安全解析 JSON 字段
+        def parse_json_field(value):
+            if value is None or value == "":
+                return None
+            if isinstance(value, str):
+                try:
+                    return json.loads(value)
+                except (json.JSONDecodeError, TypeError):
+                    return value
+            return value
+
         # 转换 Recipe 对象为字典
         items = []
         for r in recipes:
@@ -199,8 +233,8 @@ async def get_recommendations(
                 "desc": getattr(r, 'desc', None),
                 "cooking_time": r.cooking_time,
                 "difficulty": r.difficulty,
-                "efficacy_tags": r.efficacy_tags,
-                "cover_image": r.cover_image
+                "efficacy_tags": parse_json_field(r.efficacy_tags),
+                "image_url": r.image_url
             })
 
         return {
