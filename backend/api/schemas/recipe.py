@@ -21,17 +21,18 @@ DIFFICULTY_LABELS = {
 
 class RecipeIngredientItem(BaseModel):
     """Recipe ingredient item for response"""
+
     id: str
     ingredient_id: Optional[str] = None
     ingredient_name: str
     amount: Optional[str] = None
     is_main: bool = False
-
     class Config:
         from_attributes = True
 
 
 class RecipeStepItem(BaseModel):
+
     """Recipe step item for response"""
     id: str
     step_number: int
@@ -150,3 +151,4 @@ class StandardResponse(BaseModel):
     code: int = Field(0, description="Response code: 0 for success, -1 for error")
     message: Optional[str] = Field(None, description="Response message")
     data: Optional[dict] = Field(None, description="Response data")
+

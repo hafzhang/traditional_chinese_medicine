@@ -535,11 +535,13 @@ class RecipeImporter:
                     zid=None,  # No valid numeric ID in Excel
                     description=str(row['desc']).strip() if 'desc' in row and not pd.isna(row['desc']) else None,
                     desc=str(row['desc']).strip() if 'desc' in row and not pd.isna(row['desc']) else None,  # PRD 字段
+
                     tip=str(row['tip']).strip() if 'tip' in row and not pd.isna(row['tip']) else None,
                     meal_type=meal_type,
                     cook_time=cooking_time,  # 向后兼容字段
                     cooking_time=cooking_time,  # PRD 标准字段
                     difficulty=difficulty,
+
                     servings=2,  # Default value since Excel doesn't have servings column
                     suitable_constitutions=suitable_constitutions_json,
                     avoid_constitutions=avoid_constitutions_json,

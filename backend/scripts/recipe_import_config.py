@@ -10,6 +10,7 @@ import json
 
 # Excel 列名到数据库字段的映射 (PRD: EXCEL_COLUMN_MAP)
 EXCEL_COLUMN_MAP = {
+
     # 基本信息映射
     'title': 'name',                    # 菜谱名称 -> name
     'desc': 'description',              # 描述 -> description

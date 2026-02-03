@@ -200,15 +200,17 @@ class Food(Base):
 
 
 class Recipe(Base):
-    """食谱库表 - Phase 1 更新版 + 营养分析版"""
+    """食谱库表 - Phase 1 更新版 + 营养分析版 + Excel导入增强版"""
     __tablename__ = "recipes"
 
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+
     name = Column(String(200), nullable=False, unique=True, index=True)
     type = Column(String(50))  # 类型：粥类、汤类、茶饮、菜肴、主食、甜品小吃
     difficulty = Column(String(20), index=True)  # 难度：简单、中等、困难 -> easy/medium/harder/hard
     cook_time = Column(Integer, index=True)  # 烹饪时间（分钟）- 保留用于向后兼容
     cooking_time = Column(Integer, index=True)  # 烹饪时间（分钟）- PRD 标准字段名
+
     servings = Column(Integer)  # 份量
 
     # PRD 字段
@@ -232,6 +234,16 @@ class Recipe(Base):
     efficacy_tags = Column(JSONString)  # 功效标签，如 ["健脾", "养胃"]
     health_benefits = Column(Text)  # 健康益处
     precautions = Column(Text)  # 注意事项
+    tip = Column(Text)  # 小贴士
+
+    # 功效和节气标签
+    efficacy_tags = Column(JSON)  # 功效标签，如 ["健脾", "养胃", "补气"]
+    solar_terms = Column(JSON)  # 节气标签，如 ["春季", "立春"]
+
+    # AI处理相关字段
+    confidence = Column(Float)  # AI填充置信度分数 (0-100)
+
+    # Note: 食材和步骤现在通过关联表存储（RecipeIngredient, RecipeStep）
 
     # PRD 新增字段
     solar_terms = Column(JSONString)  # 节气标签，如 ["立冬", "小雪"]
@@ -264,9 +276,13 @@ class Recipe(Base):
     meal_type = Column(String(20))  # 餐次类型：早餐、午餐、晚餐、加餐、夜宵
 
     # 展示
-    image_url = Column(String(255))
+    image_url = Column(String(500))
+    cover_image = Column(String(500))  # 封面图片
     description = Column(Text)
     source = Column(String(100))  # 来源，如 "《本草纲目》"
+
+    # 发布状态
+    is_published = Column(Boolean, default=True)
 
     # 统计
     view_count = Column(Integer, default=0)
@@ -281,6 +297,50 @@ class Recipe(Base):
     created_at = Column(DateTime, server_default=func.now(), index=True)
     updated_at = Column(DateTime, onupdate=func.now())
     is_deleted = Column(Boolean, default=False)
+
+    # Indexes for common queries
+    __table_args__ = (
+        Index('ix_recipes_difficulty', 'difficulty'),
+        Index('ix_recipes_meal_type', 'meal_type'),
+        Index('ix_recipes_type', 'type'),
+        Index('ix_recipes_is_published', 'is_published'),
+        Index('ix_recipes_is_deleted', 'is_deleted'),
+    )
+
+
+class RecipeIngredient(Base):
+    """食谱食材关联表"""
+    __tablename__ = "recipe_ingredients"
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    recipe_id = Column(String(36), ForeignKey("recipes.id"), nullable=False, index=True)
+    ingredient_id = Column(String(36), ForeignKey("ingredients.id"), nullable=True)  # 可选，如果食材不在库中
+    ingredient_name = Column(String(100), nullable=False)  # 食材名称（冗余字段，用于查询）
+    amount = Column(String(50))  # 用量，如 "50g", "2个", "适量"
+    is_main = Column(Boolean, default=False)  # 是否主料
+    display_order = Column(Integer, default=0)  # 显示顺序
+
+    # Relationships
+    recipe = relationship("Recipe", back_populates="recipe_ingredients")
+    ingredient = relationship("Ingredient")
+
+    created_at = Column(DateTime, server_default=func.now())
+
+
+class RecipeStep(Base):
+    """食谱制作步骤表"""
+    __tablename__ = "recipe_steps"
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    recipe_id = Column(String(36), ForeignKey("recipes.id"), nullable=False, index=True)
+    step_number = Column(Integer, nullable=False)  # 步骤编号
+    description = Column(Text, nullable=False)  # 步骤描述
+    duration = Column(Integer)  # 该步骤预计时长（分钟）
+
+    # Relationships
+    recipe = relationship("Recipe", back_populates="recipe_steps")
+
+    created_at = Column(DateTime, server_default=func.now())
 
 
 class RecipeIngredient(Base):
