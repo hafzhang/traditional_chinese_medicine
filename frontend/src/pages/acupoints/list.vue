@@ -43,8 +43,19 @@
 
       <!-- 右侧穴位列表 -->
       <scroll-view class="main-list" scroll-y @scrolltolower="loadMore">
+        <!-- 经络大图 -->
+        <view v-if="activeTab === 'meridian' && selectedSideMenu" class="meridian-image-section">
+          <image
+            :src="getMeridianImageUrl(selectedSideMenu)"
+            class="meridian-image"
+            mode="aspectFit"
+            @error="handleMeridianImageError"
+          />
+        </view>
+
         <view class="section-header">
           <text class="section-title">{{ selectedMenuLabel }}</text>
+          <text class="section-count">({{ acupoints.length }})</text>
         </view>
 
         <view class="acupoint-grid">
@@ -54,8 +65,22 @@
             class="acupoint-card"
             @click="goDetail(point.id)"
           >
-            <text class="name">{{ point.name }}</text>
-            <text class="pinyin">{{ point.pinyin || point.code }}</text>
+            <view class="acupoint-image-wrapper">
+              <image
+                v-if="hasRealImage(point)"
+                :src="point.image_url"
+                class="acupoint-thumb"
+                mode="aspectFill"
+                @error="handleAcupointImageError(point, $event)"
+              />
+              <view v-if="!hasRealImage(point)" class="acupoint-placeholder">
+                <text class="placeholder-icon">📍</text>
+              </view>
+            </view>
+            <view class="acupoint-info">
+              <text class="name">{{ point.name }}</text>
+              <text class="pinyin">{{ point.pinyin || point.code }}</text>
+            </view>
           </view>
         </view>
 
@@ -76,8 +101,7 @@ import { onLoad } from '@dcloudio/uni-app'
 import {
   getAcupointsList,
   getBodyParts,
-  getMeridians,
-  searchAcupoints
+  getMeridians
 } from '@/api/acupoints.js'
 
 // 状态
@@ -216,6 +240,44 @@ function goDetail(id) {
     url: `/pages/acupoints/detail?id=${id}`
   })
 }
+
+// 检查穴位是否有真实图片（非默认图片）
+function hasRealImage(point) {
+  if (!point.image_url) return false
+  return !point.image_url.includes('default.png')
+}
+
+// 处理穴位图片加载错误
+function handleAcupointImageError(point, e) {
+  console.log('Acupoint image load error:', point.name, e)
+}
+
+// 获取经络图片URL
+function getMeridianImageUrl(meridian) {
+  // 经络图片映射 - 使用GIF文件
+  const meridianImageMap = {
+    '任脉': '/static/acupoints/meridians/任脉.gif',
+    '督脉': '/static/acupoints/meridians/督脉.gif',
+    '手太阴肺经': '/static/acupoints/meridians/手太阴肺经.gif',
+    '手阳明大肠经': '/static/acupoints/meridians/手阳明大肠经.gif',
+    '足阳明胃经': '/static/acupoints/meridians/足阳明胃经.gif',
+    '足太阴脾经': '/static/acupoints/meridians/足太阴脾经.gif',
+    '手少阴心经': '/static/acupoints/meridians/手少阴心经.gif',
+    '手太阳小肠经': '/static/acupoints/meridians/手太阳小肠经.gif',
+    '足太阳膀胱经': '/static/acupoints/meridians/足太阳膀胱经.gif',
+    '足少阴肾经': '/static/acupoints/meridians/足少阴肾经.gif',
+    '手厥阴心包经': '/static/acupoints/meridians/手厥阴心包经.gif',
+    '手少阳三焦经': '/static/acupoints/meridians/手少阳三焦经.gif',
+    '足少阳胆经': '/static/acupoints/meridians/足少阳胆经.gif',
+    '足厥阴肝经': '/static/acupoints/meridians/足厥阴肝经.gif'
+  }
+  return meridianImageMap[meridian] || ''
+}
+
+// 处理经络图片加载错误
+function handleMeridianImageError(e) {
+  console.log('Meridian image load error:', e)
+}
 </script>
 
 <style lang="scss">
@@ -343,8 +405,28 @@ function goDetail(id) {
   box-sizing: border-box;
 }
 
+/* 经络大图 */
+.meridian-image-section {
+  margin-bottom: 20rpx;
+  background: #f8f8f8;
+  border-radius: 16rpx;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  .meridian-image {
+    width: 100%;
+    height: 350rpx;
+    object-fit: contain;
+  }
+}
+
 .section-header {
   padding: 10rpx 0 20rpx;
+  display: flex;
+  align-items: center;
+  gap: 10rpx;
 
   .section-title {
     font-size: 32rpx;
@@ -365,6 +447,11 @@ function goDetail(id) {
       border-radius: 3rpx;
     }
   }
+
+  .section-count {
+    font-size: 26rpx;
+    color: #999;
+  }
 }
 
 /* 穴位网格 */
@@ -377,28 +464,68 @@ function goDetail(id) {
 .acupoint-card {
   background: #fff;
   border-radius: 16rpx;
-  padding: 30rpx 20rpx;
-  text-align: center;
+  overflow: hidden;
   box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.08);
   border: 1rpx solid #f0f0f0;
   transition: all 0.3s;
+  display: flex;
+  flex-direction: column;
 
   &:active {
     transform: scale(0.98);
     box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.1);
   }
 
+  .acupoint-image-wrapper {
+    width: 100%;
+    height: 140rpx;
+    background: #f5f5f5;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+
+    .acupoint-thumb {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .acupoint-placeholder {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+
+      .placeholder-icon {
+        font-size: 60rpx;
+        opacity: 0.5;
+      }
+    }
+  }
+
+  .acupoint-info {
+    padding: 15rpx;
+    text-align: center;
+  }
+
   .name {
     display: block;
-    font-size: 36rpx;
+    font-size: 30rpx;
     font-weight: bold;
     color: #333;
-    margin-bottom: 10rpx;
+    margin-bottom: 8rpx;
   }
 
   .pinyin {
     display: block;
-    font-size: 24rpx;
+    font-size: 22rpx;
     color: #999;
   }
 }

@@ -108,24 +108,33 @@ COMPOSITE_IMAGES = {
 }
 
 
-def get_image_for_acupoint(code: str) -> str:
+def get_image_for_acupoint(code: str, prefer_composite: bool = True) -> str:
     """
     根据穴位代码获取图片文件名
 
     Args:
         code: 穴位代码，如 "LI4"
+        prefer_composite: 是否优先使用组合图片（默认True）
 
     Returns:
         图片文件名，如果没有找到返回默认图片
     """
+    # 如果优先使用组合图片，先检查组合图片
+    if prefer_composite:
+        for composite_file, codes in COMPOSITE_IMAGES.items():
+            if code in codes:
+                return composite_file
+
+    # 检查单穴位图片
     if code in CODE_TO_IMAGE and CODE_TO_IMAGE[code]:
         # 返回第一个匹配的图片
         return CODE_TO_IMAGE[code][0]
 
-    # 尝试通过组合图片匹配
-    for composite_file, codes in COMPOSITE_IMAGES.items():
-        if code in codes:
-            return composite_file
+    # 如果不优先组合图片，最后检查组合图片
+    if not prefer_composite:
+        for composite_file, codes in COMPOSITE_IMAGES.items():
+            if code in codes:
+                return composite_file
 
     # 没有找到对应图片
     return "default.png"

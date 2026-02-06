@@ -68,6 +68,7 @@ async def get_acupoints(
                     "id": a.id,
                     "name": a.name,
                     "code": a.code,
+                    "pinyin": a.pinyin,
                     "meridian": a.meridian,
                     "body_part": a.body_part,
                     "location": a.simple_location,
@@ -82,11 +83,14 @@ async def get_acupoints(
 
 # 静态列表路由必须放在动态路由之前
 @router.get("/body-parts/list")
-async def get_body_parts() -> Dict[str, Any]:
+async def get_body_parts(db: Session = Depends(get_db_optional)) -> Dict[str, Any]:
     """
     获取部位列表
     """
-    body_parts = acupoint_service.get_body_parts()
+    if db is None:
+        raise HTTPException(status_code=503, detail="Database unavailable")
+
+    body_parts = acupoint_service.get_body_parts(db)
 
     return {
         "code": 0,
@@ -142,6 +146,7 @@ async def get_acupoint_recommendation(
                     "id": a.id,
                     "name": a.name,
                     "code": a.code,
+                    "pinyin": a.pinyin,
                     "meridian": a.meridian,
                     "body_part": a.body_part,
                     "simple_location": a.simple_location,
@@ -180,6 +185,7 @@ async def get_acupoints_by_symptom(
                     "id": item["acupoint"].id,
                     "name": item["acupoint"].name,
                     "code": item["acupoint"].code,
+                    "pinyin": item["acupoint"].pinyin,
                     "meridian": item["acupoint"].meridian,
                     "body_part": item["acupoint"].body_part,
                     "simple_location": item["acupoint"].simple_location,
@@ -218,8 +224,12 @@ async def get_acupoints_by_meridian(
                     "id": a.id,
                     "name": a.name,
                     "code": a.code,
+                    "pinyin": a.pinyin,
+                    "meridian": a.meridian,
+                    "body_part": a.body_part,
                     "location": a.simple_location,
-                    "efficacy": a.efficacy
+                    "efficacy": a.efficacy,
+                    "image_url": a.image_url
                 }
                 for a in acupoints
             ]
@@ -251,18 +261,28 @@ async def get_acupoint_detail(
             "id": acupoint.id,
             "name": acupoint.name,
             "code": acupoint.code,
+            "pinyin": acupoint.pinyin,
+            "aliases": acupoint.aliases,
             "meridian": acupoint.meridian,
+            "five_element": acupoint.five_element,
             "body_part": acupoint.body_part,
             "location": acupoint.location,
             "simple_location": acupoint.simple_location,
+            "explanation": acupoint.explanation,
+            "functions": acupoint.functions,
             "efficacy": acupoint.efficacy,
             "indications": acupoint.indications,
             "massage_method": acupoint.massage_method,
+            "moxibustion_method": acupoint.moxibustion_method,
             "massage_duration": acupoint.massage_duration,
             "massage_frequency": acupoint.massage_frequency,
             "precautions": acupoint.precautions,
+            "anatomical_structure": acupoint.anatomical_structure,
+            "combinations": acupoint.combinations,
             "suitable_constitutions": acupoint.suitable_constitutions,
             "constitution_benefit": acupoint.constitution_benefit,
-            "image_url": acupoint.image_url
+            "image_url": acupoint.image_url,
+            "anatomical_image_url": acupoint.anatomical_image_url,
+            "model_3d_url": acupoint.model_3d_url
         }
     }

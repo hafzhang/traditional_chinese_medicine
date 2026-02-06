@@ -18,9 +18,6 @@ class AcupointService:
         "phlegm_damp", "damp_heat", "blood_stasis", "qi_depression", "special"
     }
 
-    # 部位列表
-    BODY_PARTS = ["头面部", "颈项部", "胸腹部", "腰背部", "上肢", "下肢"]
-
     def get_acupoint_by_id(self, acupoint_id: str, db: Session) -> Optional[Acupoint]:
         """
         根据ID获取穴位详情
@@ -169,20 +166,24 @@ class AcupointService:
 
         return acupoints
 
-    def get_body_parts(self) -> List[Dict[str, str]]:
+    def get_body_parts(self, db: Session) -> List[Dict[str, str]]:
         """
         获取部位列表
+
+        Args:
+            db: 数据库会话
 
         Returns:
             部位列表
         """
+        from sqlalchemy import func
+
+        # 从数据库动态获取部位列表
+        body_parts = db.query(Acupoint.body_part).distinct().order_by(Acupoint.body_part).all()
         return [
-            {"value": "头面部", "label": "头面部"},
-            {"value": "颈项部", "label": "颈项部"},
-            {"value": "胸腹部", "label": "胸腹部"},
-            {"value": "腰背部", "label": "腰背部"},
-            {"value": "上肢", "label": "上肢"},
-            {"value": "下肢", "label": "下肢"}
+            {"value": bp[0], "label": bp[0]}
+            for bp in body_parts
+            if bp[0]
         ]
 
     def get_meridians(self, db: Session) -> List[str]:
